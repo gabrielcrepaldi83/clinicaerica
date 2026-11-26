@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Espaço Clínico — Gestão Psicológica</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      .print-only { display: block !important; }
+    }
+    .print-only { display: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+
+  <!-- TELA DE LOGIN -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-teal-900 via-slate-900 to-slate-800">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-50 text-teal-700 mb-3 border border-teal-100">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900">Espaço Clínico</h1>
+        <p class="text-sm text-slate-500 mt-1">Acesso restrito ao consultório</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">E-mail</label>
+          <input id="login-email" type="email" required placeholder="psicologa@exemplo.com"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Senha</label>
+          <input id="login-password" type="password" required placeholder="••••••••"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm" />
+        </div>
+        <p id="login-error" class="text-xs text-red-600 font-medium hidden"></p>
+        <button type="submit" id="login-btn"
+          class="w-full py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm transition cursor-pointer">
+          Entrar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO PRINCIPAL -->
+  <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row">
+    <!-- Barra Lateral (Desktop) -->
+    <aside class="no-print w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between shrink-0">
+      <div>
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-widest text-teal-700">Consultório</span>
+            <h2 id="brand-name" class="text-lg font-bold text-slate-900 leading-tight">Espaço Clínico</h2>
+            <p id="brand-crp" class="text-xs text-slate-500"></p>
+          </div>
+        </div>
+
+        <nav class="p-3 flex md:flex-col gap-1 overflow-x-auto">
+          <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Visão Geral</span>
+          </button>
+          <button onclick="switchTab('agenda')" data-tab="agenda" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Agenda & Sessões</span>
+          </button>
+          <button onclick="switchTab('pacientes')" data-tab="pacientes" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Pacientes</span>
+          </button>
+          <button onclick="switchTab('instrumentos')" data-tab="instrumentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Instrumentos</span>
+          </button>
+          <button onclick="switchTab('financeiro')" data-tab="financeiro" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Financeiro</span>
+          </button>
+          <button onclick="switchTab('config')" data-tab="config" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
+            <span>Configurações</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 hidden md:block">
+        <div class="text-xs text-slate-400 truncate mb-2" id="user-email-label"></div>
+        <button onclick="logout()" class="w-full py-2 px-3 rounded-xl border border-slate-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-xs font-semibold text-slate-600 transition cursor-pointer">
+          Sair do sistema
+        </button>
+      </div>
+    </aside>
+
+    <!-- Conteúdo -->
+    <main class="no-print flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto">
+      <!-- TOAST / FEEDBACK -->
+      <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg"></div>
+
+      <!-- ABA: VISÃO GERAL -->
+      <section id="tab-dashboard" class="tab-content space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Visão Geral</h1>
+            <p id="today-label" class="text-sm text-slate-500"></p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Nova Sessão</button>
+            <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-xs font-semibold uppercase text-slate-400">Pacientes Ativos</p>
+            <p id="kpi-pacientes" class="text-3xl font-bold text-slate-900 mt-1">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-xs font-semibold uppercase text-slate-400">Sessões Hoje</p>
+            <p id="kpi-sessoes-hoje" class="text-3xl font-bold text-teal-700 mt-1">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-xs font-semibold uppercase text-slate-400">A Receber (Pendente)</p>
+            <p id="kpi-pendente" class="text-3xl font-bold text-amber-600 mt-1">R$ 0,00</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <p class="text-xs font-semibold uppercase text-slate-400">Recebido no Mês</p>
+            <p id="kpi-recebido-mes" class="text-3xl font-bold text-emerald-700 mt-1">R$ 0,00</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-5">
+          <h2 class="text-base font-bold text-slate-900 mb-3">Agenda de Hoje</h2>
+          <div id="dash-today-list" class="divide-y divide-slate-100 text-sm text-slate-600">Carregando...</div>
+        </div>
+      </section>
+
+      <!-- ABA: AGENDA & SESSÕES -->
+      <section id="tab-agenda" class="tab-content hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Agenda & Evoluções</h1>
+            <p class="text-sm text-slate-500">Marcar como <strong>Realizada</strong> ou <strong>Falta Cobrada</strong> lança automaticamente no financeiro.</p>
+          </div>
+          <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                  <th class="py-3 px-4">Data / Hora</th>
+                  <th class="py-3 px-4">Paciente</th>
+                  <th class="py-3 px-4">Modalidade</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4">Prontuário</th>
+                  <th class="py-3 px-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="sessions-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA: PACIENTES -->
+      <section id="tab-pacientes" class="tab-content hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
+            <p class="text-sm text-slate-500">Cadastro, anamnese e histórico completo por paciente.</p>
+          </div>
+          <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200">
+          <input id="patient-search" oninput="renderPatients()" type="text" placeholder="Buscar paciente por nome ou CPF..."
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600" />
+        </div>
+
+        <div id="patients-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+        <!-- FICHA DETALHADA DO PACIENTE -->
+        <div id="patient-detail-panel" class="hidden bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+          <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 id="detail-name" class="text-xl font-bold text-slate-900"></h2>
+              <p id="detail-meta" class="text-sm text-slate-500"></p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="editCurrentPatient()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Editar Cadastro</button>
+              <button onclick="closePatientDetail()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 cursor-pointer">Fechar</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl">
+            <div><span class="font-semibold text-slate-700">Telefone:</span> <span id="detail-phone"></span></div>
+            <div><span class="font-semibold text-slate-700">Emergência:</span> <span id="detail-emergency"></span></div>
+            <div><span class="font-semibold text-slate-700">Valor Sessão:</span> <span id="detail-value"></span></div>
+            <div><span class="font-semibold text-slate-700">Cobrança:</span> <span id="detail-billing"></span></div>
+            <div class="md:col-span-2"><span class="font-semibold text-slate-700">Anamnese / Observações iniciais:</span> <p id="detail-anamnesis" class="mt-1 text-slate-600 whitespace-pre-line"></p></div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-bold text-slate-900 mb-2">Evoluções & Sessões</h3>
+              <div id="detail-sessions" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 mb-2">Instrumentos Aplicados</h3>
+              <div id="detail-instruments" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA: INSTRUMENTOS -->
+      <section id="tab-instrumentos" class="tab-content hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Instrumentos & Testes</h1>
+            <p class="text-sm text-slate-500">Registro de escalas, inventários e protocolos aplicados por paciente.</p>
+          </div>
+          <button onclick="openInstrumentModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Registrar Instrumento</button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                  <th class="py-3 px-4">Data</th>
+                  <th class="py-3 px-4">Paciente</th>
+                  <th class="py-3 px-4">Instrumento</th>
+                  <th class="py-3 px-4">Escore / Resultado</th>
+                  <th class="py-3 px-4">Síntese / Interpretação</th>
+                  <th class="py-3 px-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="instruments-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA: FINANCEIRO -->
+      <section id="tab-financeiro" class="tab-content hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Financeiro & Recibos</h1>
+            <p class="text-sm text-slate-500">Controle de pagamentos, formas de recebimento e emissão de recibos/declarações.</p>
+          </div>
+          <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                  <th class="py-3 px-4">Vencimento</th>
+                  <th class="py-3 px-4">Paciente</th>
+                  <th class="py-3 px-4">Descrição</th>
+                  <th class="py-3 px-4">Valor</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="finance-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA: CONFIGURAÇÕES -->
+      <section id="tab-config" class="tab-content hidden space-y-6 max-w-2xl">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">Configurações do Consultório</h1>
+          <p class="text-sm text-slate-500">Esses dados aparecem automaticamente nos recibos e declarações.</p>
+        </div>
+
+        <form id="config-form" class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Nome Completo da Profissional</label>
+            <input id="cfg-nome" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">CRP</label>
+              <input id="cfg-crp" type="text" placeholder="Ex: CRP 06/123456" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Telefone / WhatsApp</label>
+              <input id="cfg-telefone" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Endereço do Consultório</label>
+            <input id="cfg-endereco" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Chave Pix</label>
+            <input id="cfg-pix" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">Salvar Configurações</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: PACIENTE -->
+  <div id="patient-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 id="patient-modal-title" class="text-lg font-bold text-slate-900">Novo Paciente</h3>
+      <form id="patient-form" class="space-y-3">
+        <input type="hidden" id="pat-id" />
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo *</label>
+          <input id="pat-nome" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF</label>
+            <input id="pat-cpf" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Nascimento</label>
+            <input id="pat-nasc" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone</label>
+            <input id="pat-tel" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Contato de Emergência</label>
+            <input id="pat-emerg" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor Sessão (R$)</label>
+            <input id="pat-valor" type="number" step="0.01" value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Cobrança</label>
+            <select id="pat-cobranca" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="por_sessao">Por sessão</option>
+              <option value="pacote_mensal">Pacote mensal</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+            <select id="pat-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="ativo">Ativo</option>
+              <option value="pausa">Pausa</option>
+              <option value="alta">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Anamnese / Observações Iniciais</label>
+          <textarea id="pat-anamnese" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('patient-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SESSÃO & EVOLUÇÃO -->
+  <div id="session-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-lg font-bold text-slate-900">Sessão & Evolução Clínica</h3>
+      <form id="session-form" class="space-y-3">
+        <input type="hidden" id="ses-id" />
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Paciente *</label>
+          <select id="ses-paciente" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Data e Hora *</label>
+            <input id="ses-datahora" type="datetime-local" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Modalidade</label>
+            <select id="ses-modalidade" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="presencial">Presencial</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Status da Sessão</label>
+            <select id="ses-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="agendada">Agendada</option>
+              <option value="realizada">Realizada</option>
+              <option value="falta_cobrada">Falta Cobrada</option>
+              <option value="falta_justificada">Falta Justificada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor da Sessão (R$)</label>
+            <input id="ses-valor" type="number" step="0.01" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Evolução / Relatório da Sessão</label>
+          <textarea id="ses-evolucao" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <label class="flex items-center gap-2 text-xs font-medium text-slate-700">
+          <input id="ses-finalizado" type="checkbox" class="rounded border-slate-300 text-teal-700" />
+          Finalizar e bloquear edição futura deste registro clínico
+        </label>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('session-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-700 text-white text-sm font-semibold cursor-pointer">Salvar Sessão</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: INSTRUMENTO -->
+  <div id="instrument-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Registrar Instrumento Aplicado</h3>
+      <form id="instrument-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Paciente *</label>
+          <select id="inst-paciente" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Instrumento / Teste *</label>
+            <input id="inst-nome" type="text" required placeholder="Ex: BDI-II, BAI, TDAH..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Aplicação *</label>
+            <input id="inst-data" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Escore / Resultado</label>
+          <input id="inst-escore" type="text" placeholder="Ex: 18 pontos — Moderado" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações / Interpretação</label>
+          <textarea id="inst-interp" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('instrument-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FINANCEIRO -->
+  <div id="finance-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Novo Lançamento Financeiro</h3>
+      <form id="finance-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Paciente *</label>
+          <select id="fin-paciente" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Descrição *</label>
+          <input id="fin-desc" type="text" required placeholder="Ex: Pacote mensal - Novembro" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor (R$) *</label>
+            <input id="fin-valor" type="number" step="0.01" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Vencimento *</label>
+            <input id="fin-venc" type="date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('finance-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ÁREA DE IMPRESSÃO / RECIBO -->
+  <div id="print-area" class="print-only p-8 text-slate-900 max-w-2xl mx-auto"></div>
+
+  <script>
+    // =========================================================================
+    // 1. CONFIGURAÇÃO DO SUPABASE — SUBSTITUA PELAS SUAS CHAVES DO PROJETO
+    // =========================================================================
+    const SUPABASE_URL = 'https://oifwuyoocdimkcspskzv.supabase.co/rest/v1/';
+    const SUPABASE_ANON_KEY = 'sb_publishable_nQkwnzcjBJqtzkWUqGRIcw_JXaUMWnQ';
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let state = {
+      config: null,
+      patients: [],
+      sessions: [],
+      instruments: [],
+      finance: [],
+      selectedPatientId: null
+    };
+
+    const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
+    const fmtDateTime = (dt) => dt ? new Date(dt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // =========================================================================
+    // 2. AUTENTICAÇÃO
+    // =========================================================================
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('login-error');
+      errEl.classList.add('hidden');
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errEl.textContent = 'E-mail ou senha inválidos.';
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    async function logout() {
+      await sb.auth.signOut();
+    }
+
+    sb.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        document.getElementById('user-email-label').textContent = currentUser.email;
+        document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        await loadAllData();
+        switchTab('dashboard');
+      } else {
+        currentUser = null;
+        document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    });
+
+    // =========================================================================
+    // 3. CARREGAMENTO E NAVEGAÇÃO
+    // =========================================================================
+    async function loadAllData() {
+      const [cfgRes, patRes, sesRes, instRes, finRes] = await Promise.all([
+        sb.from('configuracoes_profissional').select('*').eq('user_id', currentUser.id).maybeSingle(),
+        sb.from('pacientes').select('*').order('nome_completo'),
+        sb.from('sessoes').select('*').order('data_hora', { ascending: false }),
+        sb.from('instrumentos_aplicados').select('*').order('data_aplicacao', { ascending: false }),
+        sb.from('financeiro').select('*').order('data_vencimento', { ascending: false })
+      ]);
+
+      state.config = cfgRes.data;
+      state.patients = patRes.data || [];
+      state.sessions = sesRes.data || [];
+      state.instruments = instRes.data || [];
+      state.finance = finRes.data || [];
+
+      applyConfigToUI();
+      renderDashboard();
+      renderPatients();
+      renderSessions();
+      renderInstruments();
+      renderFinance();
+      populatePatientSelects();
+    }
+
+    function applyConfigToUI() {
+      if (state.config) {
+        document.getElementById('brand-name').textContent = state.config.nome_completo || 'Espaço Clínico';
+        document.getElementById('brand-crp').textContent = state.config.crp || '';
+        document.getElementById('cfg-nome').value = state.config.nome_completo || '';
+        document.getElementById('cfg-crp').value = state.config.crp || '';
+        document.getElementById('cfg-telefone').value = state.config.telefone || '';
+        document.getElementById('cfg-endereco').value = state.config.endereco_consultorio || '';
+        document.getElementById('cfg-pix').value = state.config.chave_pix || '';
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.tab === tabName;
+        btn.classList.toggle('bg-teal-50', active);
+        btn.classList.toggle('text-teal-800', active);
+        btn.classList.toggle('font-semibold', active);
+      });
+    }
+
+    function getPatientName(id) {
+      return state.patients.find(p => p.id === id)?.nome_completo || 'Paciente';
+    }
+
+    function populatePatientSelects() {
+      const options = `<option value="">Selecione...</option>` +
+        state.patients.map(p => `<option value="${p.id}" data-valor="${p.valor_sessao || 0}">${p.nome_completo}</option>`).join('');
+      ['ses-paciente', 'inst-paciente', 'fin-paciente'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = options;
+      });
+    }
+
+    // =========================================================================
+    // 4. DASHBOARD
+    // =========================================================================
+    function renderDashboard() {
+      const ativos = state.patients.filter(p => p.status === 'ativo').length;
+      const hojeISO = new Date().toISOString().slice(0, 10);
+      const sessoesHoje = state.sessions.filter(s => s.data_hora?.slice(0, 10) === hojeISO);
+
+      const pendente = state.finance
+        .filter(f => f.status === 'pendente')
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      const mesAtual = hojeISO.slice(0, 7);
+      const recebidoMes = state.finance
+        .filter(f => f.status === 'pago' && (f.data_pagamento || f.data_vencimento || '').startsWith(mesAtual))
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      document.getElementById('kpi-pacientes').textContent = ativos;
+      document.getElementById('kpi-sessoes-hoje').textContent = sessoesHoje.length;
+      document.getElementById('kpi-pendente').textContent = fmtBRL(pendente);
+      document.getElementById('kpi-recebido-mes').textContent = fmtBRL(recebidoMes);
+
+      const listEl = document.getElementById('dash-today-list');
+      if (!sessoesHoje.length) {
+        listEl.innerHTML = '<p class="py-3 text-slate-400">Nenhuma sessão agendada para hoje.</p>';
+      } else {
+        listEl.innerHTML = sessoesHoje.map(s => `
+          <div class="py-3 flex items-center justify-between gap-2">
+            <div>
+              <span class="font-semibold text-slate-900">${getPatientName(s.paciente_id)}</span>
+              <span class="text-xs text-slate-500 ml-2">${fmtDateTime(s.data_hora)} • ${s.modalidade}</span>
+            </div>
+            <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-teal-700 hover:underline cursor-pointer">Abrir sessão</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    // =========================================================================
+    // 5. PACIENTES
+    // =========================================================================
+    function openPatientModal(patient = null) {
+      document.getElementById('patient-form').reset();
+      document.getElementById('pat-id').value = patient?.id || '';
+      document.getElementById('patient-modal-title').textContent = patient ? 'Editar Paciente' : 'Novo Paciente';
+      if (patient) {
+        document.getElementById('pat-nome').value = patient.nome_completo || '';
+        document.getElementById('pat-cpf').value = patient.cpf || '';
+        document.getElementById('pat-nasc').value = patient.data_nascimento || '';
+        document.getElementById('pat-tel').value = patient.telefone || '';
+        document.getElementById('pat-emerg').value = patient.contato_emergencia || '';
+        document.getElementById('pat-valor').value = patient.valor_sessao || 0;
+        document.getElementById('pat-cobranca').value = patient.modelo_cobranca || 'por_sessao';
+        document.getElementById('pat-status').value = patient.status || 'ativo';
+        document.getElementById('pat-anamnese').value = patient.anamnese || '';
+      }
+      openModal('patient-modal');
+    }
+
+    document.getElementById('patient-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('pat-id').value;
+      const payload = {
+        user_id: currentUser.id,
+        nome_completo: document.getElementById('pat-nome').value.trim(),
+        cpf: document.getElementById('pat-cpf').value.trim() || null,
+        data_nascimento: document.getElementById('pat-nasc').value || null,
+        telefone: document.getElementById('pat-tel').value.trim() || null,
+        contato_emergencia: document.getElementById('pat-emerg').value.trim() || null,
+        valor_sessao: Number(document.getElementById('pat-valor').value || 0),
+        modelo_cobranca: document.getElementById('pat-cobranca').value,
+        status: document.getElementById('pat-status').value,
+        anamnese: document.getElementById('pat-anamnese').value.trim() || null
+      };
+
+      const res = id
+        ? await sb.from('pacientes').update(payload).eq('id', id)
+        : await sb.from('pacientes').insert(payload);
+
+      if (res.error) return showToast('Erro ao salvar paciente.');
+      closeModal('patient-modal');
+      showToast('Paciente salvo!');
+      await loadAllData();
+      if (id && state.selectedPatientId === id) openPatientDetail(id);
+    });
+
+    function renderPatients() {
+      const q = (document.getElementById('patient-search')?.value || '').toLowerCase();
+      const filtered = state.patients.filter(p =>
+        (p.nome_completo || '').toLowerCase().includes(q) || (p.cpf || '').toLowerCase().includes(q)
+      );
+
+      const grid = document.getElementById('patients-grid');
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="col-span-full bg-white p-6 rounded-2xl border border-slate-200 text-sm text-slate-400">Nenhum paciente encontrado.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => `
+        <div onclick="openPatientDetail('${p.id}')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-teal-500 transition cursor-pointer space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900">${p.nome_completo}</h3>
+            <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${p.status}</span>
+          </div>
+          <p class="text-xs text-slate-500">${p.telefone || 'Sem telefone'} • ${fmtBRL(p.valor_sessao)}/sessão</p>
+        </div>
+      `).join('');
+    }
+
+    function openPatientDetail(id) {
+      const p = state.patients.find(item => item.id === id);
+      if (!p) return;
+      state.selectedPatientId = id;
+      document.getElementById('detail-name').textContent = p.nome_completo;
+      document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Status: ${p.status}`;
+      document.getElementById('detail-phone').textContent = p.telefone || '—';
+      document.getElementById('detail-emergency').textContent = p.contato_emergencia || '—';
+      document.getElementById('detail-value').textContent = fmtBRL(p.valor_sessao);
+      document.getElementById('detail-billing').textContent = p.modelo_cobranca === 'pacote_mensal' ? 'Pacote mensal' : 'Por sessão';
+      document.getElementById('detail-anamnesis').textContent = p.anamnese || 'Nenhuma observação cadastrada.';
+
+      const pSessions = state.sessions.filter(s => s.paciente_id === id);
+      document.getElementById('detail-sessions').innerHTML = pSessions.length
+        ? pSessions.map(s => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${fmtDateTime(s.data_hora)}</strong> (${s.status})<p class="text-slate-600 mt-1">${s.evolucao_clinica || 'Sem evolução registrada.'}</p></div>`).join('')
+        : '<p class="text-slate-400">Nenhuma sessão registrada.</p>';
+
+      const pInst = state.instruments.filter(i => i.paciente_id === id);
+      document.getElementById('detail-instruments').innerHTML = pInst.length
+        ? pInst.map(i => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${i.nome_instrumento}</strong> — ${fmtDate(i.data_aplicacao)}<p class="text-slate-600 mt-1">Resultado: ${i.escore_resultado || '—'}</p></div>`).join('')
+        : '<p class="text-slate-400">Nenhum instrumento aplicado.</p>';
+
+      document.getElementById('patient-detail-panel').classList.remove('hidden');
+    }
+
+    function closePatientDetail() {
+      state.selectedPatientId = null;
+      document.getElementById('patient-detail-panel').classList.add('hidden');
+    }
+
+    function editCurrentPatient() {
+      const p = state.patients.find(item => item.id === state.selectedPatientId);
+      if (p) openPatientModal(p);
+    }
+
+    // =========================================================================
+    // 6. SESSÕES & AUTOMAÇÃO FINANCEIRA
+    // =========================================================================
+    document.getElementById('ses-paciente').addEventListener('change', (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (opt?.dataset?.valor && !document.getElementById('ses-id').value) {
+        document.getElementById('ses-valor').value = opt.dataset.valor;
+      }
+    });
+
+    function openSessionModal(sessionId = null) {
+      document.getElementById('session-form').reset();
+      const s = sessionId ? state.sessions.find(item => item.id === sessionId) : null;
+      document.getElementById('ses-id').value = s?.id || '';
+      document.getElementById('ses-paciente').value = s?.paciente_id || '';
+      document.getElementById('ses-datahora').value = s?.data_hora ? new Date(s.data_hora).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+      document.getElementById('ses-modalidade').value = s?.modalidade || 'presencial';
+      document.getElementById('ses-status').value = s?.status || 'agendada';
+      document.getElementById('ses-valor').value = s?.valor_sessao || 0;
+      document.getElementById('ses-evolucao').value = s?.evolucao_clinica || '';
+      document.getElementById('ses-finalizado').checked = Boolean(s?.prontuario_finalizado);
+      document.getElementById('ses-evolucao').disabled = Boolean(s?.prontuario_finalizado);
+      openModal('session-modal');
+    }
+
+    document.getElementById('session-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('ses-id').value;
+      const status = document.getElementById('ses-status').value;
+      const valor = Number(document.getElementById('ses-valor').value || 0);
+      const pacienteId = document.getElementById('ses-paciente').value;
+      const dataHora = new Date(document.getElementById('ses-datahora').value).toISOString();
+
+      const payload = {
+        user_id: currentUser.id,
+        paciente_id: pacienteId,
+        data_hora: dataHora,
+        modalidade: document.getElementById('ses-modalidade').value,
+        status,
+        valor_sessao: valor,
+        evolucao_clinica: document.getElementById('ses-evolucao').value.trim() || null,
+        prontuario_finalizado: document.getElementById('ses-finalizado').checked
+      };
+
+      const res = id
+        ? await sb.from('sessoes').update(payload).eq('id', id).select().single()
+        : await sb.from('sessoes').insert(payload).select().single();
+
+      if (res.error) return showToast('Erro ao salvar sessão.');
+      const savedSession = res.data;
+
+      // Gera cobrança automática se realizada ou falta cobrada e ainda não lançada
+      if ((status === 'realizada' || status === 'falta_cobrada') && valor > 0) {
+        const alreadyExists = state.finance.some(f => f.sessao_id === savedSession.id);
+        if (!alreadyExists) {
+          await sb.from('financeiro').insert({
+            user_id: currentUser.id,
+            paciente_id: pacienteId,
+            sessao_id: savedSession.id,
+            descricao: `${status === 'falta_cobrada' ? 'Falta cobrada' : 'Sessão'} — ${fmtDate(dataHora.slice(0, 10))}`,
+            valor,
+            data_vencimento: dataHora.slice(0, 10),
+            status: 'pendente'
+          });
+        }
+      }
+
+      closeModal('session-modal');
+      showToast('Sessão salva!');
+      await loadAllData();
+    });
+
+    function renderSessions() {
+      const tbody = document.getElementById('sessions-tbody');
+      if (!state.sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhuma sessão cadastrada.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.sessions.map(s => `
+        <tr>
+          <td class="py-3 px-4 whitespace-nowrap">${fmtDateTime(s.data_hora)}</td>
+          <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(s.paciente_id)}</td>
+          <td class="py-3 px-4 capitalize">${s.modalidade}</td>
+          <td class="py-3 px-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">${s.status.replace('_', ' ')}</span></td>
+          <td class="py-3 px-4 text-xs">${s.prontuario_finalizado ? 'Finalizado' : 'Rascunho'}</td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="openSessionModal('${s.id}')" class="text-teal-700 font-semibold hover:underline cursor-pointer">Abrir / Evoluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 7. INSTRUMENTOS
+    // =========================================================================
+    function openInstrumentModal() {
+      document.getElementById('instrument-form').reset();
+      document.getElementById('inst-data').value = new Date().toISOString().slice(0, 10);
+      openModal('instrument-modal');
+    }
+
+    document.getElementById('instrument-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { error } = await sb.from('instrumentos_aplicados').insert({
+        user_id: currentUser.id,
+        paciente_id: document.getElementById('inst-paciente').value,
+        nome_instrumento: document.getElementById('inst-nome').value.trim(),
+        data_aplicacao: document.getElementById('inst-data').value,
+        escore_resultado: document.getElementById('inst-escore').value.trim() || null,
+        interpretacao: document.getElementById('inst-interp').value.trim() || null
+      });
+      if (error) return showToast('Erro ao salvar instrumento.');
+      closeModal('instrument-modal');
+      showToast('Instrumento registrado!');
+      await loadAllData();
+    });
+
+    async function deleteInstrument(id) {
+      await sb.from('instrumentos_aplicados').delete().eq('id', id);
+      showToast('Registro removido.');
+      await loadAllData();
+    }
+
+    function renderInstruments() {
+      const tbody = document.getElementById('instruments-tbody');
+      if (!state.instruments.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum instrumento registrado.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.instruments.map(i => `
+        <tr>
+          <td class="py-3 px-4 whitespace-nowrap">${fmtDate(i.data_aplicacao)}</td>
+          <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(i.paciente_id)}</td>
+          <td class="py-3 px-4 font-semibold text-teal-800">${i.nome_instrumento}</td>
+          <td class="py-3 px-4">${i.escore_resultado || '—'}</td>
+          <td class="py-3 px-4 text-slate-600 max-w-xs truncate">${i.interpretacao || '—'}</td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="deleteInstrument('${i.id}')" class="text-xs text-red-600 hover:underline cursor-pointer">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 8. FINANCEIRO & RECIBO
+    // =========================================================================
+    function openFinanceModal() {
+      document.getElementById('finance-form').reset();
+      document.getElementById('fin-venc').value = new Date().toISOString().slice(0, 10);
+      openModal('finance-modal');
+    }
+
+    document.getElementById('finance-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { error } = await sb.from('financeiro').insert({
+        user_id: currentUser.id,
+        paciente_id: document.getElementById('fin-paciente').value,
+        descricao: document.getElementById('fin-desc').value.trim(),
+        valor: Number(document.getElementById('fin-valor').value),
+        data_vencimento: document.getElementById('fin-venc').value,
+        status: 'pendente'
+      });
+      if (error) return showToast('Erro ao criar lançamento.');
+      closeModal('finance-modal');
+      showToast('Lançamento criado!');
+      await loadAllData();
+    });
+
+    async function markAsPaid(id) {
+      const forma = prompt('Forma de pagamento (Pix, Transferência, Dinheiro, Cartão):', 'Pix') || 'Pix';
+      const hoje = new Date().toISOString().slice(0, 10);
+      const { error } = await sb.from('financeiro').update({
+        status: 'pago',
+        forma_pagamento: forma,
+        data_pagamento: hoje
+      }).eq('id', id);
+      if (error) return showToast('Erro ao atualizar pagamento.');
+      showToast('Marcado como pago!');
+      await loadAllData();
+    }
+
+    function printReceipt(financeId) {
+      const item = state.finance.find(f => f.id === financeId);
+      if (!item) return;
+      const patient = state.patients.find(p => p.id === item.paciente_id);
+      const cfg = state.config || {};
+
+      document.getElementById('print-area').innerHTML = `
+        <div class="border border-slate-300 rounded-xl p-8 space-y-6">
+          <div class="border-b pb-4">
+            <h1 class="text-xl font-bold">${cfg.nome_completo || 'Psicóloga'}</h1>
+            <p class="text-sm text-slate-600">${cfg.crp || ''} ${cfg.endereco_consultorio ? '• ' + cfg.endereco_consultorio : ''}</p>
+          </div>
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold uppercase tracking-wider">Recibo de Atendimento Psicológico</h2>
+            <span class="text-lg font-bold bg-slate-100 px-3 py-1 rounded">${fmtBRL(item.valor)}</span>
+          </div>
+          <p class="text-sm leading-relaxed">
+            Recebi de <strong>${patient?.nome_completo || 'Paciente'}</strong>${patient?.cpf ? ` (CPF: ${patient.cpf})` : ''}, a importância de <strong>${fmtBRL(item.valor)}</strong>, referente a <strong>${item.descricao}</strong>${item.forma_pagamento ? ` (${item.forma_pagamento})` : ''}.
+          </p>
+          <p class="text-sm text-slate-600 pt-6">Data de emissão: ${fmtDate(item.data_pagamento || new Date().toISOString().slice(0, 10))}</p>
+          <div class="pt-10 text-center text-sm">
+            <div class="border-t border-slate-400 w-64 mx-auto pt-2">
+              ${cfg.nome_completo || 'Assinatura da Profissional'}<br/>
+              <span class="text-xs text-slate-500">${cfg.crp || ''}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      window.print();
+    }
+
+    function renderFinance() {
+      const tbody = document.getElementById('finance-tbody');
+      if (!state.finance.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento financeiro.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.finance.map(f => `
+        <tr>
+          <td class="py-3 px-4 whitespace-nowrap">${fmtDate(f.data_vencimento)}</td>
+          <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(f.paciente_id)}</td>
+          <td class="py-3 px-4">${f.descricao}</td>
+          <td class="py-3 px-4 font-semibold whitespace-nowrap">${fmtBRL(f.valor)}</td>
+          <td class="py-3 px-4">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${f.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+              ${f.status === 'pago' ? `Pago (${f.forma_pagamento || '—'})` : 'Pendente'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+            ${f.status !== 'pago' ? `<button onclick="markAsPaid('${f.id}')" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">Receber</button>` : ''}
+            <button onclick="printReceipt('${f.id}')" class="text-xs font-semibold text-slate-700 hover:underline cursor-pointer">Recibo / PDF</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 9. CONFIGURAÇÕES
+    // =========================================================================
+    document.getElementById('config-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        user_id: currentUser.id,
+        nome_completo: document.getElementById('cfg-nome').value.trim(),
+        crp: document.getElementById('cfg-crp').value.trim() || null,
+        telefone: document.getElementById('cfg-telefone').value.trim() || null,
+        endereco_consultorio: document.getElementById('cfg-endereco').value.trim() || null,
+        chave_pix: document.getElementById('cfg-pix').value.trim() || null,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await sb
+        .from('configuracoes_profissional')
+        .upsert(payload, { onConflict: 'user_id' });
+
+      if (error) return showToast('Erro ao salvar configurações.');
+      showToast('Configurações salvas!');
+      await loadAllData();
+    });
+  </script>
+</body>
+</html>
