@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#a21caf" /> <!-- Cor do tema atualizada para magenta -->
-  <title>Anotaí Psi — Gestão Psicológica</title> <!-- Título da aba atualizado -->
+  <meta name="theme-color" content="#a21caf" />
+  <title>Anotaí Psi — Gestão Psicológica</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Links para PWA atualizados -->
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <style>
     @media print {
       .no-print { display: none !important; }
@@ -20,19 +22,18 @@
       .print-only { display: block !important; }
     }
     .print-only { display: none; }
-    /* Estilização do scrollbar para WebKit */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased selection:bg-fuchsia-100 selection:text-fuchsia-900"> <!-- Seleção de texto atualizada para tons de fuchsia -->
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-fuchsia-100 selection:text-fuchsia-900">
 
   <!-- TELA DE BLOQUEIO POR INATIVIDADE -->
   <div id="lock-screen" class="no-print fixed inset-0 z-50 hidden bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
-      <div class="w-12 h-12 rounded-full bg-fuchsia-50 text-fuchsia-700 flex items-center justify-center mx-auto"> <!-- Ícone de bloqueio atualizado para tons de fuchsia -->
+      <div class="w-12 h-12 rounded-full bg-fuchsia-50 text-fuchsia-700 flex items-center justify-center mx-auto">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
@@ -45,23 +46,22 @@
         <input id="unlock-pin" type="password" inputmode="numeric" placeholder="PIN" required
           class="w-full text-center tracking-widest text-lg px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-fuchsia-600" />
         <p id="unlock-error" class="text-xs text-red-600 hidden">PIN incorreto.</p>
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Desbloquear</button> <!-- Botão de desbloquear atualizado -->
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Desbloquear</button>
       </form>
       <button onclick="logout()" class="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer">Encerrar sessão completa</button>
     </div>
   </div>
 
   <!-- TELA DE LOGIN -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-fuchsia-900 via-slate-900 to-slate-800"> <!-- Fundo da tela de login atualizado para degradê com fuchsia -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-fuchsia-900 via-slate-900 to-slate-800">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-fuchsia-50 text-fuchsia-700 mb-4 border-2 border-fuchsia-100"> <!-- Ícone do app na tela de login atualizado para tons de fuchsia -->
-          <!-- Símbolo Psi (Ψ) estilizado e elegante -->
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-fuchsia-50 text-fuchsia-700 mb-4 border-2 border-fuchsia-100">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="36" stroke-linecap="round" stroke-linejoin="round">
             <path d="M256 108v296 M154 152c0 88 42 138 102 138s102-50 102-138 M214 404h84"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold text-slate-900">Anotaí Psi</h1> <!-- Título na tela de login atualizado -->
+        <h1 class="text-2xl font-bold text-slate-900">Anotaí Psi</h1>
         <p class="text-sm text-slate-500 mt-1">Gestão de consultório psicológico</p>
       </div>
 
@@ -77,7 +77,7 @@
             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-fuchsia-600 text-sm" />
         </div>
         <p id="login-error" class="text-xs text-red-600 font-medium hidden"></p>
-        <button type="submit" class="w-full py-3 px-4 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white font-semibold text-sm transition cursor-pointer"> <!-- Botão de entrar atualizado -->
+        <button type="submit" class="w-full py-3 px-4 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white font-semibold text-sm transition cursor-pointer">
           Entrar
         </button>
       </form>
@@ -91,11 +91,11 @@
       <div>
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <span class="text-xs font-bold uppercase tracking-widest text-fuchsia-700">Consultório</span> <!-- Cor do subtítulo da marca atualizada -->
-            <h2 id="brand-name" class="text-lg font-bold text-slate-900 leading-tight">Anotaí Psi</h2> <!-- Nome da marca na barra lateral atualizado -->
+            <span class="text-xs font-bold uppercase tracking-widest text-fuchsia-700">Consultório</span>
+            <h2 id="brand-name" class="text-lg font-bold text-slate-900 leading-tight">Anotaí Psi</h2>
             <p id="brand-crp" class="text-xs text-slate-500"></p>
           </div>
-          <button onclick="lockNow()" title="Bloquear tela" class="p-2 rounded-lg text-slate-400 hover:text-fuchsia-700 hover:bg-slate-100 cursor-pointer"> <!-- Cor do ícone de bloqueio atualizada -->
+          <button onclick="lockNow()" title="Bloquear tela" class="p-2 rounded-lg text-slate-400 hover:text-fuchsia-700 hover:bg-slate-100 cursor-pointer">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
@@ -133,7 +133,7 @@
             <p id="today-label" class="text-sm text-slate-500"></p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Nova Sessão</button> <!-- Botão de nova sessão atualizado para tons de fuchsia -->
+            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Nova Sessão</button>
             <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
           </div>
         </div>
@@ -145,7 +145,7 @@
           </div>
           <div class="bg-white p-5 rounded-2xl border border-slate-200">
             <p class="text-xs font-semibold uppercase text-slate-400">Sessões Hoje</p>
-            <p id="kpi-sessoes-hoje" class="text-3xl font-bold text-fuchsia-700 mt-1">0</p> <!-- Cor do KPI de sessões atualizada -->
+            <p id="kpi-sessoes-hoje" class="text-3xl font-bold text-fuchsia-700 mt-1">0</p>
           </div>
           <div class="bg-white p-5 rounded-2xl border border-slate-200">
             <p class="text-xs font-semibold uppercase text-slate-400">A Receber (Pendente)</p>
@@ -178,14 +178,13 @@
           </div>
           <div class="flex flex-wrap gap-2">
             <div class="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 text-xs font-semibold">
-              <button onclick="setAgendaView('semana')" id="btn-view-semana" class="px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer">Grade Semanal</button> <!-- Botão de grade semanal atualizado -->
+              <button onclick="setAgendaView('semana')" id="btn-view-semana" class="px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer">Grade Semanal</button>
               <button onclick="setAgendaView('lista')" id="btn-view-lista" class="px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer">Lista Completa</button>
             </div>
-            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button> <!-- Botão de agendar sessão atualizado -->
+            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button>
           </div>
         </div>
 
-        <!-- VISÃO SEMANAL -->
         <div id="agenda-weekly-view" class="space-y-4">
           <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-200">
             <button onclick="shiftWeek(-7)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 cursor-pointer">← Semana Anterior</button>
@@ -195,7 +194,6 @@
           <div id="weekly-grid" class="grid grid-cols-1 md:grid-cols-6 gap-3"></div>
         </div>
 
-        <!-- VISÃO LISTA -->
         <div id="agenda-list-view" class="hidden bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -220,13 +218,13 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
-            <p class="text-sm text-slate-500">Cadastro, pacotes de sessões, anexos privados e histórico clínico.</p>
+            <p class="text-sm text-slate-500">Cadastro, medicações, pacotes, anexos privados e histórico clínico.</p>
           </div>
-          <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button> <!-- Botão de novo paciente atualizado -->
+          <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
         </div>
 
         <div class="bg-white p-4 rounded-2xl border border-slate-200">
-          <input id="patient-search" oninput="renderPatients()" type="text" placeholder="Buscar paciente por nome ou CPF..."
+          <input id="patient-search" oninput="renderPatients()" type="text" placeholder="Buscar paciente por nome, CPF ou tag..."
             class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-600" />
         </div>
 
@@ -236,8 +234,11 @@
         <div id="patient-detail-panel" class="hidden bg-white rounded-2xl border border-slate-200 p-6 space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <h2 id="detail-name" class="text-xl font-bold text-slate-900"></h2>
-              <p id="detail-meta" class="text-sm text-slate-500"></p>
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 id="detail-name" class="text-xl font-bold text-slate-900"></h2>
+                <span id="detail-med-badge" class="hidden text-xs px-2.5 py-0.5 rounded-full font-semibold bg-fuchsia-100 text-fuchsia-800"></span>
+              </div>
+              <p id="detail-meta" class="text-sm text-slate-500 mt-0.5"></p>
             </div>
             <div class="flex flex-wrap gap-2">
               <button onclick="editCurrentPatient()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Editar Cadastro</button>
@@ -246,22 +247,40 @@
           </div>
 
           <!-- CONTROLE DE PACOTE MENSAL -->
-          <div id="detail-package-box" class="hidden bg-fuchsia-50/70 border border-fuchsia-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4"> <!-- Cores do controle de pacote atualizadas para tons de fuchsia -->
+          <div id="detail-package-box" class="hidden bg-fuchsia-50/70 border border-fuchsia-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p class="text-xs font-bold uppercase text-fuchsia-800">Pacote Mensal Ativo</p>
               <p id="detail-package-status" class="text-sm font-semibold text-slate-800 mt-0.5"></p>
             </div>
-            <button onclick="renewCurrentPatientPackage()" class="px-3.5 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer"> <!-- Botão de renovar pacote atualizado -->
+            <button onclick="renewCurrentPatientPackage()" class="px-3.5 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">
               Renovar Pacote & Gerar Cobrança
             </button>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm bg-slate-50 p-4 rounded-xl">
             <div><span class="font-semibold text-slate-700">Telefone:</span> <span id="detail-phone"></span></div>
-            <div><span class="font-semibold text-slate-700">Emergência:</span> <span id="detail-emergency"></span></div>
+            <div><span class="font-semibold text-slate-700">E-mail:</span> <span id="detail-email"></span></div>
+            <div><span class="font-semibold text-slate-700">Escolaridade / Profissão:</span> <span id="detail-work-edu"></span></div>
+            <div><span class="font-semibold text-slate-700">Endereço / CEP:</span> <span id="detail-address"></span></div>
+            <div><span class="font-semibold text-slate-700">Responsável:</span> <span id="detail-guardian"></span></div>
+            <div><span class="font-semibold text-slate-700">Origem / Tags:</span> <span id="detail-origin-tags"></span></div>
             <div><span class="font-semibold text-slate-700">Valor Referência:</span> <span id="detail-value"></span></div>
             <div><span class="font-semibold text-slate-700">Modalidade Cobrança:</span> <span id="detail-billing"></span></div>
-            <div class="md:col-span-2"><span class="font-semibold text-slate-700">Anamnese / Observações iniciais:</span> <p id="detail-anamnesis" class="mt-1 text-slate-600 whitespace-pre-line"></p></div>
+            <div class="md:col-span-2"><span class="font-semibold text-slate-700">Demanda / Queixa Inicial:</span> <p id="detail-demand" class="mt-0.5 text-slate-600 whitespace-pre-line"></p></div>
+            <div class="md:col-span-2"><span class="font-semibold text-slate-700">Objetivos & Plano de Tratamento:</span> <p id="detail-plan" class="mt-0.5 text-slate-600 whitespace-pre-line"></p></div>
+            <div class="md:col-span-2"><span class="font-semibold text-slate-700">Anamnese / Observações / Diagnóstico:</span> <p id="detail-anamnesis" class="mt-0.5 text-slate-600 whitespace-pre-line"></p></div>
+          </div>
+
+          <!-- ACOMPANHAMENTO DE MEDICAMENTOS -->
+          <div class="border border-slate-200 rounded-xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm">Acompanhamento de Medicamentos</h3>
+                <p class="text-xs text-slate-500">Registro de prescrições, posologia, ajustes de dose e prescritores.</p>
+              </div>
+              <button onclick="openMedicationModal()" class="px-3 py-1.5 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">+ Adicionar Medicamento</button>
+            </div>
+            <div id="detail-medications" class="divide-y divide-slate-100 text-xs"></div>
           </div>
 
           <!-- GRÁFICO DE EVOLUÇÃO DE ESCORES -->
@@ -273,16 +292,17 @@
           <!-- ANEXOS PRIVADOS -->
           <div class="border border-slate-200 rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <h3 class="font-bold text-slate-900 text-sm">Documentos & Anexos Privados (Contratos, Termos, Testes)</h3>
+              <h3 class="font-bold text-slate-900 text-sm">Documentos & Anexos Privados (Contratos, Termos, Testes, Arquivos IA)</h3>
               <form id="upload-form" class="flex flex-wrap items-center gap-2">
                 <select id="upload-category" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
                   <option value="Contrato">Contrato</option>
                   <option value="Termo">Termo</option>
                   <option value="Teste/Escala">Teste/Escala</option>
                   <option value="Laudo/Exame">Laudo/Exame</option>
+                  <option value="Relatório IA">Relatório IA</option>
                   <option value="Outro">Outro</option>
                 </select>
-                <input id="upload-file" type="file" required class="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700" /> <!-- Estilo do input de arquivo atualizado -->
+                <input id="upload-file" type="file" required class="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700" />
                 <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold cursor-pointer">Anexar</button>
               </form>
             </div>
@@ -307,9 +327,9 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Instrumentos & Testes</h1>
-            <p class="text-sm text-slate-500">Registro de escalas e inventários (escores numéricos geram gráfico na ficha do paciente).</p>
+            <p class="text-sm text-slate-500">Registro de escalas e inventários — tudo fica salvo também no histórico do paciente.</p>
           </div>
-          <button onclick="openInstrumentModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Registrar Instrumento</button> <!-- Botão de registrar instrumento atualizado -->
+          <button onclick="openInstrumentModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Registrar Instrumento</button>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -374,7 +394,7 @@
             <textarea id="doc-body" rows="7" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed"></textarea>
           </div>
 
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer"> <!-- Botão de gerar documento atualizado -->
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">
             Gerar Documento / Salvar PDF
           </button>
         </form>
@@ -389,16 +409,15 @@
           </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="exportIRCSV()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">Exportar CSV (Carnê-Leão)</button>
-            <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button> <!-- Botão de novo lançamento atualizado -->
+            <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button>
           </div>
         </div>
 
-        <!-- FILTRO MÊS / ANO PARA RELATÓRIO -->
         <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
           <div class="flex flex-wrap items-center gap-3">
             <label class="text-xs font-semibold uppercase text-slate-500">Filtrar Período:</label>
             <input id="fin-filter-month" type="month" onchange="renderFinance()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm" />
-            <button onclick="document.getElementById('fin-filter-month').value=''; renderFinance();" class="text-xs text-fuchsia-700 hover:underline cursor-pointer">Ver todos</button> <!-- Cor do link 'Ver todos' atualizada -->
+            <button onclick="document.getElementById('fin-filter-month').value=''; renderFinance();" class="text-xs text-fuchsia-700 hover:underline cursor-pointer">Ver todos</button>
           </div>
           <div class="text-sm">
             <span class="text-slate-500">Total Recebido no Filtro:</span>
@@ -425,11 +444,11 @@
         </div>
       </section>
 
-      <!-- ABA: CONFIGURAÇÕES -->
-      <section id="tab-config" class="tab-content hidden space-y-6 max-w-2xl">
+      <!-- ABA: CONFIGURAÇÕES & IMPORTADOR DE PLANILHA -->
+      <section id="tab-config" class="tab-content hidden space-y-8 max-w-3xl">
         <div>
           <h1 class="text-2xl font-bold text-slate-900">Configurações do Consultório</h1>
-          <p class="text-sm text-slate-500">Dados profissionais para recibos, documentos CFP, WhatsApp e bloqueio de segurança.</p>
+          <p class="text-sm text-slate-500">Dados profissionais, segurança e importador de planilhas.</p>
         </div>
 
         <form id="config-form" class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
@@ -465,45 +484,116 @@
             <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Modelo de Mensagem WhatsApp (use {nome}, {data}, {hora})</label>
             <textarea id="cfg-whatsapp" rows="2" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
           </div>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer"> <!-- Botão de salvar configurações atualizado -->
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">
             Salvar Configurações
           </button>
         </form>
+
+        <!-- IMPORTADOR DE PLANILHA -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Importador de Planilha</h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Importe planilhas (.csv, .xlsx, .xls) de <strong>Pacientes</strong> ou de <strong>Prontuário & Evoluções</strong> mapeando automaticamente colunas como nome, telefone, e-mail, endereço/CEP, escolaridade, profissão, observações, tags, origem, responsável, demanda, plano de tratamento, diagnóstico e sessões.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tipo de Planilha</label>
+              <select id="import-type" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+                <option value="pacientes">Cadastro de Pacientes</option>
+                <option value="evolucoes">Prontuário e Evoluções por Sessão</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Arquivo da Planilha</label>
+              <input id="import-file" type="file" accept=".csv,.xlsx,.xls" onchange="previewSpreadsheet(event)"
+                class="w-full text-xs text-slate-600 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700" />
+            </div>
+          </div>
+
+          <div id="import-preview-box" class="hidden space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p id="import-preview-summary" class="text-xs font-semibold text-slate-700"></p>
+            <div id="import-preview-rows" class="max-h-48 overflow-y-auto text-xs space-y-1.5"></div>
+            <button onclick="executeSpreadsheetImport()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">
+              Confirmar e Importar Registros
+            </button>
+          </div>
+        </div>
       </section>
     </main>
   </div>
 
   <!-- MODAL: PACIENTE -->
   <div id="patient-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
       <h3 id="patient-modal-title" class="text-lg font-bold text-slate-900">Novo Paciente</h3>
       <form id="patient-form" class="space-y-3">
         <input type="hidden" id="pat-id" />
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo *</label>
-          <input id="pat-nome" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo *</label>
+            <input id="pat-nome" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">CPF (para Recibo/IR)</label>
             <input id="pat-cpf" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp</label>
+            <input id="pat-tel" type="text" placeholder="Ex: 16999999999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
+            <input id="pat-email" type="email" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Nascimento</label>
             <input id="pat-nasc" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp</label>
-            <input id="pat-tel" type="text" placeholder="Ex: 16999999999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Escolaridade</label>
+            <input id="pat-escol" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Contato de Emergência</label>
-            <input id="pat-emerg" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Profissão</label>
+            <input id="pat-prof" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Como conheceu</label>
+            <input id="pat-origem" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Endereço / CEP</label>
+            <input id="pat-end" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tags</label>
+            <input id="pat-tags" type="text" placeholder="Ex: ansiedade, adulto, online" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nome do Responsável</label>
+            <input id="pat-resp-nome" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF do Responsável</label>
+            <input id="pat-resp-cpf" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone Responsável</label>
+            <input id="pat-resp-tel" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Valor (R$)</label>
             <input id="pat-valor" type="number" step="0.01" value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
@@ -523,8 +613,12 @@
               <option value="alta">Alta</option>
             </select>
           </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Emergência</label>
+            <input id="pat-emerg" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
         </div>
-        <div id="pat-package-fields" class="hidden grid grid-cols-2 gap-3 bg-fuchsia-50 p-3 rounded-xl border border-fuchsia-100"> <!-- Cores dos campos de pacote atualizadas -->
+        <div id="pat-package-fields" class="hidden grid grid-cols-2 gap-3 bg-fuchsia-50 p-3 rounded-xl border border-fuchsia-100">
           <div>
             <label class="block text-xs font-semibold text-fuchsia-900 mb-1">Sessões no Pacote</label>
             <input id="pat-pkg-total" type="number" min="1" value="4" class="w-full px-3 py-1.5 rounded-lg border border-fuchsia-200 bg-white text-sm" />
@@ -535,18 +629,76 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Anamnese / Observações Iniciais</label>
-          <textarea id="pat-anamnese" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Avaliação da Demanda / Queixa</label>
+          <textarea id="pat-demanda" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Objetivos e Plano de Tratamento</label>
+          <textarea id="pat-plano" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Anamnese / Observações / Diagnóstico ou Encerramento</label>
+          <textarea id="pat-anamnese" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('patient-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button> <!-- Botão de salvar paciente atualizado -->
+          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: SESSÃO & RECORRÊNCIA -->
+  <!-- MODAL: MEDICAMENTO -->
+  <div id="medication-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Acompanhamento de Medicamento</h3>
+      <form id="medication-form" class="space-y-3">
+        <input type="hidden" id="med-id" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Medicamento *</label>
+            <input id="med-nome" type="text" required placeholder="Ex: Sertralina" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Dosagem / Posologia</label>
+            <input id="med-posologia" type="text" placeholder="Ex: 50mg - 1 cp manhã" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Início</label>
+            <input id="med-inicio" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Término / Ajuste</label>
+            <input id="med-fim" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Situação</label>
+            <select id="med-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="em_uso">Em uso</option>
+              <option value="ajustado">Dose ajustada</option>
+              <option value="suspenso">Suspenso</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Médico Prescritor / Especialidade</label>
+          <input id="med-prescritor" type="text" placeholder="Ex: Dr. Lucas — Psiquiatria" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações / Efeitos Relatados</label>
+          <textarea id="med-obs" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('medication-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SESSÃO & RECORRÊNCIA + IMPORTAÇÃO DE TEXTO/IA -->
   <div id="session-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
       <h3 class="text-lg font-bold text-slate-900">Sessão & Evolução Clínica</h3>
@@ -571,7 +723,7 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Status da Sessão</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Status / Presença</label>
             <select id="ses-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
               <option value="agendada">Agendada</option>
               <option value="realizada">Realizada</option>
@@ -586,7 +738,6 @@
           </div>
         </div>
 
-        <!-- OPÇÃO DE RECORRÊNCIA (APENAS NOVO AGENDAMENTO) -->
         <div id="ses-recurrence-box" class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -605,16 +756,22 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Evolução / Relatório da Sessão</label>
-          <textarea id="ses-evolucao" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <label class="block text-xs font-semibold text-slate-600">Evolução / Relatório da Sessão</label>
+            <label class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">
+              Importar arquivo (.txt, .md, .docx)
+              <input type="file" accept=".txt,.md,.docx" onchange="importTextFileIntoEvolution(event)" class="hidden" />
+            </label>
+          </div>
+          <textarea id="ses-evolucao" rows="5" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
         </div>
         <label class="flex items-center gap-2 text-xs font-medium text-slate-700">
-          <input id="ses-finalizado" type="checkbox" class="rounded border-slate-300 text-fuchsia-700" /> <!-- Checkbox de finalização atualizado -->
+          <input id="ses-finalizado" type="checkbox" class="rounded border-slate-300 text-fuchsia-700" />
           Finalizar e bloquear edição futura deste registro clínico
         </label>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('session-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar Sessão</button> <!-- Botão de salvar sessão atualizado -->
+          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar Sessão</button>
         </div>
       </form>
     </div>
@@ -649,7 +806,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('instrument-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button> <!-- Botão de salvar instrumento atualizado -->
+          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
         </div>
       </form>
     </div>
@@ -680,7 +837,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('finance-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button> <!-- Botão de salvar lançamento atualizado -->
+          <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
         </div>
       </form>
     </div>
@@ -694,14 +851,22 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_nQkwnzcjBJqtzkWUqGRIcw_JXaUMWnQ';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('data:text/javascript;charset=utf-8,' + encodeURIComponent('self.addEventListener("fetch", () => {});')).catch(() => {});
+      });
+    }
+
     let currentUser = null;
     let instrumentChartInstance = null;
     let weekOffsetDays = 0;
     let inactivityTimer = null;
+    let pendingImportRows = [];
 
     let state = {
       config: null,
       patients: [],
+      medications: [],
       sessions: [],
       instruments: [],
       finance: [],
@@ -724,6 +889,7 @@
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
+    // BLOQUEIO POR INATIVIDADE
     function resetInactivityTimer() {
       clearTimeout(inactivityTimer);
       if (currentUser && state.config?.pin_bloqueio) {
@@ -755,6 +921,7 @@
       document.addEventListener(evt, resetInactivityTimer, { passive: true })
     );
 
+    // AUTENTICAÇÃO
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('login-error');
@@ -793,9 +960,10 @@
     });
 
     async function loadAllData() {
-      const [cfgRes, patRes, sesRes, instRes, finRes, attRes] = await Promise.all([
+      const [cfgRes, patRes, medRes, sesRes, instRes, finRes, attRes] = await Promise.all([
         sb.from('configuracoes_profissional').select('*').eq('user_id', currentUser.id).maybeSingle(),
         sb.from('pacientes').select('*').order('nome_completo'),
+        sb.from('medicamentos_paciente').select('*').order('created_at', { ascending: false }),
         sb.from('sessoes').select('*').order('data_hora', { ascending: false }),
         sb.from('instrumentos_aplicados').select('*').order('data_aplicacao', { ascending: false }),
         sb.from('financeiro').select('*').order('data_vencimento', { ascending: false }),
@@ -804,6 +972,7 @@
 
       state.config = cfgRes.data;
       state.patients = patRes.data || [];
+      state.medications = medRes.data || [];
       state.sessions = sesRes.data || [];
       state.instruments = instRes.data || [];
       state.finance = finRes.data || [];
@@ -822,7 +991,7 @@
 
     function applyConfigToUI() {
       if (state.config) {
-        document.getElementById('brand-name').textContent = state.config.nome_completo || 'Espaço Clínico';
+        document.getElementById('brand-name').textContent = state.config.nome_completo || 'Anotaí Psi';
         document.getElementById('brand-crp').textContent = state.config.crp || '';
         document.getElementById('cfg-nome').value = state.config.nome_completo || '';
         document.getElementById('cfg-crp').value = state.config.crp || '';
@@ -839,8 +1008,8 @@
       document.getElementById('tab-' + tabName).classList.remove('hidden');
       document.querySelectorAll('.nav-btn').forEach(btn => {
         const active = btn.dataset.tab === tabName;
-        btn.classList.toggle('bg-fuchsia-50', active); // Cor de fundo da aba ativa atualizada
-        btn.classList.toggle('text-fuchsia-800', active); // Cor do texto da aba ativa atualizada
+        btn.classList.toggle('bg-fuchsia-50', active);
+        btn.classList.toggle('text-fuchsia-800', active);
         btn.classList.toggle('font-semibold', active);
       });
     }
@@ -874,6 +1043,7 @@
       window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
+    // DASHBOARD
     function renderDashboard() {
       const ativos = state.patients.filter(p => p.status === 'ativo');
       const hojeISO = new Date().toISOString().slice(0, 10);
@@ -901,13 +1071,13 @@
         : sessoesHoje.map(s => `
           <div class="py-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="font-bold text-fuchsia-800 mr-2">${fmtTime(s.data_hora)}</span> <!-- Cor do horário na agenda atualizada -->
+              <span class="font-bold text-fuchsia-800 mr-2">${fmtTime(s.data_hora)}</span>
               <span class="font-semibold text-slate-900">${getPatientName(s.paciente_id)}</span>
               <span class="text-xs text-slate-500 ml-2 capitalize">(${s.modalidade} • ${s.status.replace('_', ' ')})</span>
             </div>
             <div class="flex items-center gap-3">
               <button onclick="sendWhatsAppReminder('${s.id}')" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">WhatsApp</button>
-              <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">Abrir</button> <!-- Cor do botão 'Abrir' atualizada -->
+              <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">Abrir</button>
             </div>
           </div>
         `).join('');
@@ -927,6 +1097,7 @@
         }).join('');
     }
 
+    // PACIENTES & MEDICAMENTOS
     function togglePackageFields() {
       const isPkg = document.getElementById('pat-cobranca').value === 'pacote_mensal';
       document.getElementById('pat-package-fields').classList.toggle('hidden', !isPkg);
@@ -939,15 +1110,26 @@
       if (patient) {
         document.getElementById('pat-nome').value = patient.nome_completo || '';
         document.getElementById('pat-cpf').value = patient.cpf || '';
-        document.getElementById('pat-nasc').value = patient.data_nascimento || '';
         document.getElementById('pat-tel').value = patient.telefone || '';
-        document.getElementById('pat-emerg').value = patient.contato_emergencia || '';
+        document.getElementById('pat-email').value = patient.email || '';
+        document.getElementById('pat-nasc').value = patient.data_nascimento || '';
+        document.getElementById('pat-escol').value = patient.escolaridade || '';
+        document.getElementById('pat-prof').value = patient.profissao || '';
+        document.getElementById('pat-origem').value = patient.origem_conhecimento || '';
+        document.getElementById('pat-end').value = patient.endereco_cep || '';
+        document.getElementById('pat-tags').value = patient.tags || '';
+        document.getElementById('pat-resp-nome').value = patient.responsavel_nome || '';
+        document.getElementById('pat-resp-cpf').value = patient.responsavel_cpf || '';
+        document.getElementById('pat-resp-tel').value = patient.responsavel_telefone || '';
         document.getElementById('pat-valor').value = patient.valor_sessao || 0;
         document.getElementById('pat-cobranca').value = patient.modelo_cobranca || 'por_sessao';
         document.getElementById('pat-status').value = patient.status || 'ativo';
+        document.getElementById('pat-emerg').value = patient.contato_emergencia || '';
         document.getElementById('pat-pkg-total').value = patient.sessoes_pacote_total || 4;
         document.getElementById('pat-pkg-usadas').value = patient.sessoes_pacote_usadas || 0;
-        document.getElementById('pat-anamnese').value = patient.anamnese || '';
+        document.getElementById('pat-demanda').value = patient.demanda_queixa || '';
+        document.getElementById('pat-plano').value = patient.plano_tratamento || '';
+        document.getElementById('pat-anamnese').value = patient.anamnese || patient.diagnostico_encerramento || '';
       }
       togglePackageFields();
       openModal('patient-modal');
@@ -961,14 +1143,25 @@
         user_id: currentUser.id,
         nome_completo: document.getElementById('pat-nome').value.trim(),
         cpf: document.getElementById('pat-cpf').value.trim() || null,
-        data_nascimento: document.getElementById('pat-nasc').value || null,
         telefone: document.getElementById('pat-tel').value.trim() || null,
-        contato_emergencia: document.getElementById('pat-emerg').value.trim() || null,
+        email: document.getElementById('pat-email').value.trim() || null,
+        data_nascimento: document.getElementById('pat-nasc').value || null,
+        escolaridade: document.getElementById('pat-escol').value.trim() || null,
+        profissao: document.getElementById('pat-prof').value.trim() || null,
+        origem_conhecimento: document.getElementById('pat-origem').value.trim() || null,
+        endereco_cep: document.getElementById('pat-end').value.trim() || null,
+        tags: document.getElementById('pat-tags').value.trim() || null,
+        responsavel_nome: document.getElementById('pat-resp-nome').value.trim() || null,
+        responsavel_cpf: document.getElementById('pat-resp-cpf').value.trim() || null,
+        responsavel_telefone: document.getElementById('pat-resp-tel').value.trim() || null,
         valor_sessao: Number(document.getElementById('pat-valor').value || 0),
         modelo_cobranca: cobranca,
         sessoes_pacote_total: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-total').value || 4) : 0,
         sessoes_pacote_usadas: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-usadas').value || 0) : 0,
         status: document.getElementById('pat-status').value,
+        contato_emergencia: document.getElementById('pat-emerg').value.trim() || null,
+        demanda_queixa: document.getElementById('pat-demanda').value.trim() || null,
+        plano_tratamento: document.getElementById('pat-plano').value.trim() || null,
         anamnese: document.getElementById('pat-anamnese').value.trim() || null
       };
 
@@ -986,7 +1179,9 @@
     function renderPatients() {
       const q = (document.getElementById('patient-search')?.value || '').toLowerCase();
       const filtered = state.patients.filter(p =>
-        (p.nome_completo || '').toLowerCase().includes(q) || (p.cpf || '').toLowerCase().includes(q)
+        (p.nome_completo || '').toLowerCase().includes(q) ||
+        (p.cpf || '').toLowerCase().includes(q) ||
+        (p.tags || '').toLowerCase().includes(q)
       );
 
       const grid = document.getElementById('patients-grid');
@@ -996,7 +1191,7 @@
       }
 
       grid.innerHTML = filtered.map(p => `
-        <div onclick="openPatientDetail('${p.id}')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-fuchsia-500 transition cursor-pointer space-y-2"> <!-- Cor da borda no hover atualizada -->
+        <div onclick="openPatientDetail('${p.id}')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-fuchsia-500 transition cursor-pointer space-y-2">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-slate-900">${p.nome_completo}</h3>
             <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${p.status}</span>
@@ -1005,6 +1200,7 @@
             ${p.telefone || 'Sem telefone'} • ${fmtBRL(p.valor_sessao)}
             ${p.modelo_cobranca === 'pacote_mensal' ? ` (Pacote: ${p.sessoes_pacote_usadas || 0}/${p.sessoes_pacote_total || 0})` : '/sessão'}
           </p>
+          ${p.tags ? `<p class="text-[11px] text-fuchsia-700 font-medium truncate">${p.tags}</p>` : ''}
         </div>
       `).join('');
     }
@@ -1032,13 +1228,31 @@
       const p = getPatient(id);
       if (!p) return;
       state.selectedPatientId = id;
+
+      const pMeds = state.medications.filter(m => m.paciente_id === id);
+      const activeMeds = pMeds.filter(m => m.status === 'em_uso');
+      const badge = document.getElementById('detail-med-badge');
+      if (activeMeds.length > 0) {
+        badge.textContent = `${activeMeds.length} medicação(ões) em uso`;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
       document.getElementById('detail-name').textContent = p.nome_completo;
       document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Status: ${p.status}`;
       document.getElementById('detail-phone').textContent = p.telefone || '—';
-      document.getElementById('detail-emergency').textContent = p.contato_emergencia || '—';
+      document.getElementById('detail-email').textContent = p.email || '—';
+      document.getElementById('detail-work-edu').textContent = [p.escolaridade, p.profissao].filter(Boolean).join(' • ') || '—';
+      document.getElementById('detail-address').textContent = p.endereco_cep || '—';
+      document.getElementById('detail-guardian').textContent = [p.responsavel_nome, p.responsavel_cpf, p.responsavel_telefone].filter(Boolean).join(' • ') || p.contato_emergencia || '—';
+      document.getElementById('detail-origin-tags').textContent = [p.origem_conhecimento, p.tags].filter(Boolean).join(' • ') || '—';
       document.getElementById('detail-value').textContent = fmtBRL(p.valor_sessao);
       document.getElementById('detail-billing').textContent = p.modelo_cobranca === 'pacote_mensal' ? 'Pacote mensal' : 'Por sessão';
-      document.getElementById('detail-anamnesis').textContent = p.anamnese || 'Nenhuma observação cadastrada.';
+      document.getElementById('detail-demand').textContent = p.demanda_queixa || '—';
+      document.getElementById('detail-plan').textContent = p.plano_tratamento || '—';
+      document.getElementById('detail-anamnesis').textContent = [p.anamnese, p.diagnostico_encerramento].filter(Boolean).join('
+') || 'Nenhuma observação cadastrada.';
 
       const pkgBox = document.getElementById('detail-package-box');
       if (p.modelo_cobranca === 'pacote_mensal') {
@@ -1048,6 +1262,28 @@
       } else {
         pkgBox.classList.add('hidden');
       }
+
+      // Medicamentos
+      const medEl = document.getElementById('detail-medications');
+      medEl.innerHTML = !pMeds.length
+        ? '<p class="py-2 text-slate-400">Nenhum medicamento registrado para este paciente.</p>'
+        : pMeds.map(m => `
+          <div class="py-2.5 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <span class="font-bold text-slate-900">${m.nome_medicamento}</span>
+              ${m.dosagem_posologia ? `<span class="text-slate-600 ml-1.5">— ${m.dosagem_posologia}</span>` : ''}
+              <span class="ml-2 px-2 py-0.5 rounded-full text-[11px] font-semibold ${m.status === 'em_uso' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${m.status.replace('_', ' ')}</span>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                Início: ${fmtDate(m.data_inicio)}${m.data_fim ? ` • Término/Ajuste: ${fmtDate(m.data_fim)}` : ''}${m.prescritor ? ` • Prescritor: ${m.prescritor}` : ''}
+              </div>
+              ${m.observacoes ? `<p class="text-slate-600 mt-1">${m.observacoes}</p>` : ''}
+            </div>
+            <div class="space-x-2">
+              <button onclick="openMedicationModal('${m.id}')" class="text-fuchsia-700 font-semibold hover:underline cursor-pointer">Editar</button>
+              <button onclick="deleteMedication('${m.id}')" class="text-red-600 hover:underline cursor-pointer">Excluir</button>
+            </div>
+          </div>
+        `).join('');
 
       const pSessions = state.sessions.filter(s => s.paciente_id === id);
       document.getElementById('detail-sessions').innerHTML = pSessions.length
@@ -1062,6 +1298,55 @@
       renderInstrumentChart(pInst);
       renderAttachments(id);
       document.getElementById('patient-detail-panel').classList.remove('hidden');
+    }
+
+    function openMedicationModal(medId = null) {
+      if (!state.selectedPatientId) return;
+      document.getElementById('medication-form').reset();
+      const m = medId ? state.medications.find(item => item.id === medId) : null;
+      document.getElementById('med-id').value = m?.id || '';
+      document.getElementById('med-nome').value = m?.nome_medicamento || '';
+      document.getElementById('med-posologia').value = m?.dosagem_posologia || '';
+      document.getElementById('med-inicio').value = m?.data_inicio || new Date().toISOString().slice(0, 10);
+      document.getElementById('med-fim').value = m?.data_fim || '';
+      document.getElementById('med-status').value = m?.status || 'em_uso';
+      document.getElementById('med-prescritor').value = m?.prescritor || '';
+      document.getElementById('med-obs').value = m?.observacoes || '';
+      openModal('medication-modal');
+    }
+
+    document.getElementById('medication-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!state.selectedPatientId) return;
+      const id = document.getElementById('med-id').value;
+      const payload = {
+        user_id: currentUser.id,
+        paciente_id: state.selectedPatientId,
+        nome_medicamento: document.getElementById('med-nome').value.trim(),
+        dosagem_posologia: document.getElementById('med-posologia').value.trim() || null,
+        data_inicio: document.getElementById('med-inicio').value || null,
+        data_fim: document.getElementById('med-fim').value || null,
+        status: document.getElementById('med-status').value,
+        prescritor: document.getElementById('med-prescritor').value.trim() || null,
+        observacoes: document.getElementById('med-obs').value.trim() || null
+      };
+
+      const res = id
+        ? await sb.from('medicamentos_paciente').update(payload).eq('id', id)
+        : await sb.from('medicamentos_paciente').insert(payload);
+
+      if (res.error) return showToast('Erro ao salvar medicamento.');
+      closeModal('medication-modal');
+      showToast('Medicamento salvo!');
+      await loadAllData();
+      openPatientDetail(state.selectedPatientId);
+    });
+
+    async function deleteMedication(id) {
+      await sb.from('medicamentos_paciente').delete().eq('id', id);
+      showToast('Medicamento removido.');
+      await loadAllData();
+      openPatientDetail(state.selectedPatientId);
     }
 
     function renderInstrumentChart(pInst) {
@@ -1086,8 +1371,8 @@
           datasets: [{
             label: 'Escore',
             data: numericItems.map(i => i.num),
-            borderColor: '#d946ef', // Cor da linha do gráfico atualizada para magenta
-            backgroundColor: 'rgba(217, 70, 239, 0.15)', // Cor de fundo do gráfico atualizada para magenta
+            borderColor: '#d946ef',
+            backgroundColor: 'rgba(217, 70, 239, 0.15)',
             tension: 0.25,
             fill: true
           }]
@@ -1108,7 +1393,7 @@
               <span class="font-medium text-slate-800">${a.nome_arquivo}</span>
             </div>
             <div class="space-x-3">
-              <button onclick="downloadAttachment('${a.caminho_storage}')" class="text-fuchsia-700 font-semibold hover:underline cursor-pointer">Abrir / Baixar</button> <!-- Cor dos botões de anexo atualizada -->
+              <button onclick="downloadAttachment('${a.caminho_storage}')" class="text-fuchsia-700 font-semibold hover:underline cursor-pointer">Abrir / Baixar</button>
               <button onclick="deleteAttachment('${a.id}', '${a.caminho_storage}')" class="text-red-600 hover:underline cursor-pointer">Excluir</button>
             </div>
           </div>
@@ -1164,15 +1449,39 @@
       if (p) openPatientModal(p);
     }
 
+    // AGENDA, RECORRÊNCIA & IMPORTAÇÃO DE ARQUIVO IA NA EVOLUÇÃO
+    async function importTextFileIntoEvolution(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      let text = '';
+
+      if (ext === 'docx' && window.mammoth) {
+        const arrayBuffer = await file.arrayBuffer();
+        const res = await window.mammoth.extractRawText({ arrayBuffer });
+        text = res.value || '';
+      } else {
+        text = await file.text();
+      }
+
+      if (!text.trim()) return showToast('Não foi possível extrair texto do arquivo.');
+      const textarea = document.getElementById('ses-evolucao');
+      textarea.value = textarea.value.trim() ? `${textarea.value.trim()}
+
+${text.trim()}` : text.trim();
+      event.target.value = '';
+      showToast('Texto importado para a evolução!');
+    }
+
     function setAgendaView(view) {
       const isSem = view === 'semana';
       document.getElementById('agenda-weekly-view').classList.toggle('hidden', !isSem);
       document.getElementById('agenda-list-view').classList.toggle('hidden', isSem);
       document.getElementById('btn-view-semana').className = isSem
-        ? 'px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer' // Botão de visualização semanal ativo atualizado
+        ? 'px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer'
         : 'px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer';
       document.getElementById('btn-view-lista').className = !isSem
-        ? 'px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer' // Botão de visualização lista ativo atualizado
+        ? 'px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer'
         : 'px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer';
     }
 
@@ -1208,12 +1517,12 @@
         return `
           <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[220px]">
             <div class="border-b border-slate-100 pb-2 mb-2">
-              <div class="text-xs font-bold uppercase text-fuchsia-700">${d.toLocaleDateString('pt-BR', { weekday: 'short' })}</div> <!-- Cor do dia da semana na agenda atualizada -->
+              <div class="text-xs font-bold uppercase text-fuchsia-700">${d.toLocaleDateString('pt-BR', { weekday: 'short' })}</div>
               <div class="text-sm font-bold text-slate-800">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
             </div>
             <div class="space-y-2 flex-1">
               ${daySessions.length ? daySessions.map(s => `
-                <div onclick="openSessionModal('${s.id}')" class="p-2 rounded-xl border border-slate-200 hover:border-fuchsia-500 bg-slate-50 cursor-pointer text-xs"> <!-- Cor do hover na agenda semanal atualizada -->
+                <div onclick="openSessionModal('${s.id}')" class="p-2 rounded-xl border border-slate-200 hover:border-fuchsia-500 bg-slate-50 cursor-pointer text-xs">
                   <div class="font-bold text-slate-900">${fmtTime(s.data_hora)} • ${getPatientName(s.paciente_id).split(' ')[0]}</div>
                   <div class="text-slate-500 capitalize mt-0.5">${s.status.replace('_', ' ')}</div>
                 </div>
@@ -1346,12 +1655,13 @@
           <td class="py-3 px-4 text-xs">${s.prontuario_finalizado ? 'Finalizado' : 'Rascunho'}</td>
           <td class="py-3 px-4 text-right space-x-3 whitespace-nowrap">
             <button onclick="sendWhatsAppReminder('${s.id}')" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">WhatsApp</button>
-            <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">Abrir / Evoluir</button> <!-- Cor do botão 'Abrir / Evoluir' atualizada -->
+            <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">Abrir / Evoluir</button>
           </td>
         </tr>
       `).join('');
     }
 
+    // INSTRUMENTOS
     function openInstrumentModal() {
       document.getElementById('instrument-form').reset();
       document.getElementById('inst-data').value = new Date().toISOString().slice(0, 10);
@@ -1390,7 +1700,7 @@
         <tr>
           <td class="py-3 px-4 whitespace-nowrap">${fmtDate(i.data_aplicacao)}</td>
           <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(i.paciente_id)}</td>
-          <td class="py-3 px-4 font-semibold text-fuchsia-800">${i.nome_instrumento}</td> <!-- Cor do nome do instrumento atualizada -->
+          <td class="py-3 px-4 font-semibold text-fuchsia-800">${i.nome_instrumento}</td>
           <td class="py-3 px-4">${i.escore_resultado || '—'}</td>
           <td class="py-3 px-4 text-slate-600 max-w-xs truncate">${i.interpretacao || '—'}</td>
           <td class="py-3 px-4 text-right">
@@ -1400,6 +1710,7 @@
       `).join('');
     }
 
+    // DOCUMENTOS CFP
     function fillDocTemplate() {
       const type = document.getElementById('doc-type').value;
       const p = getPatient(document.getElementById('doc-paciente').value);
@@ -1417,7 +1728,10 @@
           `Atesto, para fins de justificativa laboral/escolar, que ${nome}${cpf}, encontra-se em acompanhamento psicológico sob meus cuidados profissionais, necessitando de afastamento de suas atividades na data de ${dataFmt} em decorrência de condições psicológicas observadas em avaliação clínica.`;
       } else {
         document.getElementById('doc-body').value =
-          `Encaminho ${nome}${cpf}, atualmente em acompanhamento psicoterapêutico, para avaliação complementar especializada.\n\nSíntese clínica e motivo do encaminhamento:\n[Descreva aqui as observações clínicas pertinentes conforme Resolução CFP nº 06/2019]`;
+          `Encaminho ${nome}${cpf}, atualmente em acompanhamento psicoterapêutico, para avaliação complementar especializada.
+
+Síntese clínica e motivo do encaminhamento:
+[Descreva aqui as observações clínicas pertinentes conforme Resolução CFP nº 06/2019]`;
       }
     }
 
@@ -1452,6 +1766,7 @@
       window.print();
     });
 
+    // FINANCEIRO
     function openFinanceModal() {
       document.getElementById('finance-form').reset();
       document.getElementById('fin-venc').value = new Date().toISOString().slice(0, 10);
@@ -1582,6 +1897,7 @@
       URL.revokeObjectURL(url);
     }
 
+    // CONFIGURAÇÕES
     document.getElementById('config-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const payload = {
@@ -1605,6 +1921,127 @@
       await loadAllData();
       resetInactivityTimer();
     });
+
+    // IMPORTADOR DE PLANILHA
+    function normalizeKey(str) {
+      return String(str || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    function pickCol(row, candidates) {
+      for (const [k, v] of Object.entries(row)) {
+        const nk = normalizeKey(k);
+        if (candidates.some(c => nk.includes(c)) && v !== undefined && v !== null && String(v).trim() !== '') {
+          return String(v).trim();
+        }
+      }
+      return '';
+    }
+
+    async function previewSpreadsheet(event) {
+      const file = event.target.files[0];
+      if (!file || !window.XLSX) return;
+      const buf = await file.arrayBuffer();
+      const wb = window.XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = window.XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!rows.length) return showToast('Planilha vazia.');
+      pendingImportRows = rows;
+
+      const type = document.getElementById('import-type').value;
+      document.getElementById('import-preview-summary').textContent =
+        `${rows.length} linha(s) encontrada(s) para importar como ${type === 'pacientes' ? 'Cadastro de Pacientes' : 'Prontuário e Evoluções'}.`;
+
+      document.getElementById('import-preview-rows').innerHTML = rows.slice(0, 10).map((r, idx) => {
+        const nome = pickCol(r, ['nome', 'paciente', 'aluno', 'cliente']);
+        const extra = type === 'pacientes'
+          ? pickCol(r, ['telefone', 'celular', 'whatsapp', 'email', 'cpf'])
+          : pickCol(r, ['data', 'evolucao', 'anotac', 'queixa', 'demanda']);
+        return `<div class="p-2 rounded bg-white border border-slate-200"><strong>#${idx + 1}:</strong> ${nome || '—'} <span class="text-slate-500">(${extra || 'sem detalhe'})</span></div>`;
+      }).join('');
+
+      document.getElementById('import-preview-box').classList.remove('hidden');
+    }
+
+    async function executeSpreadsheetImport() {
+      if (!pendingImportRows.length) return;
+      const type = document.getElementById('import-type').value;
+
+      if (type === 'pacientes') {
+        const payload = pendingImportRows
+          .map(r => {
+            const nome = pickCol(r, ['nome', 'paciente', 'nome completo']);
+            if (!nome) return null;
+            const end = [pickCol(r, ['endereco', 'logradouro', 'rua']), pickCol(r, ['cep'])].filter(Boolean).join(' — ');
+            return {
+              user_id: currentUser.id,
+              nome_completo: nome,
+              cpf: pickCol(r, ['cpf']) || null,
+              telefone: pickCol(r, ['telefone', 'celular', 'whatsapp', 'fone']) || null,
+              email: pickCol(r, ['email', 'e-mail']) || null,
+              endereco_cep: end || null,
+              escolaridade: pickCol(r, ['escolaridade', 'formacao']) || null,
+              profissao: pickCol(r, ['profissao', 'ocupacao']) || null,
+              tags: pickCol(r, ['tag', 'marcador']) || null,
+              origem_conhecimento: pickCol(r, ['conheceu', 'origem', 'indicacao']) || null,
+              responsavel_nome: pickCol(r, ['responsavel']) || null,
+              responsavel_cpf: pickCol(r, ['cpf responsavel', 'cpf do responsavel']) || null,
+              responsavel_telefone: pickCol(r, ['telefone responsavel', 'celular responsavel']) || null,
+              demanda_queixa: pickCol(r, ['demanda', 'queixa']) || null,
+              plano_tratamento: pickCol(r, ['plano', 'objetivo']) || null,
+              diagnostico_encerramento: pickCol(r, ['diagnostico', 'encerramento', 'alta']) || null,
+              anamnese: pickCol(r, ['observac', 'anamnese', 'nota']) || null,
+              status: 'ativo',
+              modelo_cobranca: 'por_sessao',
+              valor_sessao: 0
+            };
+          })
+          .filter(Boolean);
+
+        const { error } = await sb.from('pacientes').insert(payload);
+        if (error) return showToast('Erro ao importar pacientes.');
+        showToast(`${payload.length} paciente(s) importado(s)!`);
+      } else {
+        let countImported = 0;
+        for (const r of pendingImportRows) {
+          const nomePac = pickCol(r, ['paciente', 'nome']);
+          const pac = state.patients.find(p => normalizeKey(p.nome_completo) === normalizeKey(nomePac));
+          if (!pac) continue;
+
+          const rawDate = pickCol(r, ['data', 'data/hora', 'data sessao']);
+          const parsedDate = rawDate ? new Date(rawDate) : new Date();
+          const isoDate = isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
+          const presenca = normalizeKey(pickCol(r, ['presenca', 'status', 'situacao']));
+          const statusSes = presenca.includes('falta') ? 'falta_justificada' : (presenca.includes('cancel') ? 'cancelada' : 'realizada');
+
+          const parts = [
+            pickCol(r, ['avaliacao', 'demanda', 'queixa']) ? `Demanda/Queixa: ${pickCol(r, ['avaliacao', 'demanda', 'queixa'])}` : '',
+            pickCol(r, ['objetivo', 'plano']) ? `Plano/Objetivos: ${pickCol(r, ['objetivo', 'plano'])}` : '',
+            pickCol(r, ['evolucao', 'anotac', 'relato']) ? `Evolução: ${pickCol(r, ['evolucao', 'anotac', 'relato'])}` : '',
+            pickCol(r, ['diagnostico', 'encerramento']) ? `Diagnóstico/Encerramento: ${pickCol(r, ['diagnostico', 'encerramento'])}` : ''
+          ].filter(Boolean).join('
+
+');
+
+          await sb.from('sessoes').insert({
+            user_id: currentUser.id,
+            paciente_id: pac.id,
+            data_hora: isoDate,
+            modalidade: 'presencial',
+            status: statusSes,
+            valor_sessao: 0,
+            evolucao_clinica: parts || 'Registro importado via planilha.'
+          });
+          countImported++;
+        }
+        showToast(`${countImported} registro(s) de prontuário/evolução importado(s)!`);
+      }
+
+      pendingImportRows = [];
+      document.getElementById('import-file').value = '';
+      document.getElementById('import-preview-box').classList.add('hidden');
+      await loadAllData();
+    }
   </script>
 </body>
 </html>
