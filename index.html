@@ -315,10 +315,14 @@
             <div id="detail-attachments" class="divide-y divide-slate-100 text-xs"></div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div>
-              <h3 class="font-bold text-slate-900 mb-2">Evoluções & Sessões</h3>
+              <h3 class="font-bold text-slate-900 mb-2">Próximas Sessões & Atualizações</h3>
               <div id="detail-sessions" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 mb-2">Histórico de Sessões</h3>
+              <div id="detail-session-history" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
             </div>
             <div>
               <h3 class="font-bold text-slate-900 mb-2">Instrumentos Aplicados</h3>
@@ -1394,20 +1398,33 @@
         `).join('');
 
       const nowMs = Date.now();
-      const pSessions = state.sessions
-        .filter(s => s.paciente_id === id)
-        .sort((a, b) => Math.abs(new Date(a.data_hora || 0).getTime() - nowMs) - Math.abs(new Date(b.data_hora || 0).getTime() - nowMs));
-      document.getElementById('detail-sessions').innerHTML = pSessions.length
-        ? pSessions.map(s => `
-            <div onclick="openSessionModal('${s.id}')" class="p-3 rounded-xl border border-slate-200 hover:border-fuchsia-500 bg-slate-50 hover:bg-fuchsia-50/30 transition cursor-pointer">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <strong class="text-slate-900">${fmtDateTime(s.data_hora)}</strong>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-white border border-slate-200 text-slate-700 capitalize">${s.status.replace('_', ' ')}</span>
-              </div>
-              <p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Clique para definir o status e registrar o relatório/anotações.'}</p>
-            </div>
-          `).join('')
-        : '<p class="text-slate-400">Nenhuma sessão registrada.</p>';
+      const allPatientSessions = state.sessions.filter(s => s.paciente_id === id);
+
+      const upcomingOrCurrent = allPatientSessions
+        .filter(s => new Date(s.data_hora || 0).getTime() >= nowMs)
+        .sort((a, b) => new Date(a.data_hora || 0).getTime() - new Date(b.data_hora || 0).getTime());
+
+      const pastSessions = allPatientSessions
+        .filter(s => new Date(s.data_hora || 0).getTime() < nowMs)
+        .sort((a, b) => new Date(b.data_hora || 0).getTime() - new Date(a.data_hora || 0).getTime());
+
+      const renderSessionCard = (s) => `
+        <div onclick="openSessionModal('${s.id}')" class="p-3 rounded-xl border border-slate-200 hover:border-fuchsia-500 bg-slate-50 hover:bg-fuchsia-50/30 transition cursor-pointer">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <strong class="text-slate-900">${fmtDateTime(s.data_hora)}</strong>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-white border border-slate-200 text-slate-700 capitalize">${s.status.replace('_', ' ')}</span>
+          </div>
+          <p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Clique para definir o status e registrar o relatório/anotações.'}</p>
+        </div>
+      `;
+
+      document.getElementById('detail-sessions').innerHTML = upcomingOrCurrent.length
+        ? upcomingOrCurrent.map(renderSessionCard).join('')
+        : '<p class="text-slate-400">Nenhuma sessão futura agendada.</p>';
+
+      document.getElementById('detail-session-history').innerHTML = pastSessions.length
+        ? pastSessions.map(renderSessionCard).join('')
+        : '<p class="text-slate-400">Nenhuma sessão passada no histórico.</p>';
 
       const pInst = state.instruments.filter(i => i.paciente_id === id);
       document.getElementById('detail-instruments').innerHTML = pInst.length
