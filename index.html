@@ -1056,7 +1056,16 @@
         document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         document.getElementById('doc-data').value = new Date().toISOString().slice(0, 10);
         await loadAllData();
-        switchTab('dashboard');
+        let savedTab = 'dashboard';
+        let savedPatientId = null;
+        try {
+          savedTab = localStorage.getItem(LAST_TAB_KEY) || 'dashboard';
+          savedPatientId = localStorage.getItem(LAST_PATIENT_KEY) || null;
+        } catch (_e) {}
+        switchTab(savedTab);
+        if (savedTab === 'pacientes' && savedPatientId && state.patients.some(p => p.id === savedPatientId)) {
+          openPatientDetail(savedPatientId);
+        }
         resetInactivityTimer();
       } else {
         currentUser = null;
@@ -1110,15 +1119,21 @@
       }
     }
 
+    const LAST_TAB_KEY = 'anota_psi_last_tab';
+    const LAST_PATIENT_KEY = 'anota_psi_last_patient_id';
+
     function switchTab(tabName) {
+      const validTabs = ['dashboard', 'agenda', 'pacientes', 'instrumentos', 'documentos', 'financeiro', 'config'];
+      const targetTab = validTabs.includes(tabName) ? tabName : 'dashboard';
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-' + targetTab).classList.remove('hidden');
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        const active = btn.dataset.tab === tabName;
+        const active = btn.dataset.tab === targetTab;
         btn.classList.toggle('bg-fuchsia-50', active);
         btn.classList.toggle('text-fuchsia-800', active);
         btn.classList.toggle('font-semibold', active);
       });
+      try { localStorage.setItem(LAST_TAB_KEY, targetTab); } catch (_e) {}
     }
 
     function getPatient(id) { return state.patients.find(p => p.id === id); }
@@ -1344,6 +1359,7 @@
       const p = getPatient(id);
       if (!p) return;
       state.selectedPatientId = id;
+      try { localStorage.setItem(LAST_PATIENT_KEY, id); } catch (_e) {}
 
       const pMeds = state.medications.filter(m => m.paciente_id === id);
       const activeMeds = pMeds.filter(m => m.status === 'em_uso');
@@ -1680,6 +1696,7 @@
 
     function closePatientDetail() {
       state.selectedPatientId = null;
+      try { localStorage.removeItem(LAST_PATIENT_KEY); } catch (_e) {}
       document.getElementById('patient-detail-panel').classList.add('hidden');
     }
 
