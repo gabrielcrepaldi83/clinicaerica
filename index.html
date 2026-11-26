@@ -321,7 +321,10 @@
               <div id="detail-sessions" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
             </div>
             <div>
-              <h3 class="font-bold text-slate-900 mb-2">Histórico de Sessões</h3>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <h3 class="font-bold text-slate-900">Histórico de Sessões</h3>
+                <span id="detail-history-count" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">0 realizadas</span>
+              </div>
               <div id="detail-session-history" class="space-y-2 max-h-72 overflow-y-auto text-sm"></div>
             </div>
             <div>
@@ -1421,6 +1424,10 @@
       document.getElementById('detail-sessions').innerHTML = upcomingOrCurrent.length
         ? upcomingOrCurrent.map(renderSessionCard).join('')
         : '<p class="text-slate-400">Nenhuma sessão futura agendada.</p>';
+
+      const realizedCount = allPatientSessions.filter(s => s.status === 'realizada').length;
+      document.getElementById('detail-history-count').textContent =
+        `${realizedCount} ${realizedCount === 1 ? 'realizada' : 'realizadas'}`;
 
       document.getElementById('detail-session-history').innerHTML = pastSessions.length
         ? pastSessions.map(renderSessionCard).join('')
