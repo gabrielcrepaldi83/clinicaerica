@@ -1398,7 +1398,15 @@
         .filter(s => s.paciente_id === id)
         .sort((a, b) => Math.abs(new Date(a.data_hora || 0).getTime() - nowMs) - Math.abs(new Date(b.data_hora || 0).getTime() - nowMs));
       document.getElementById('detail-sessions').innerHTML = pSessions.length
-        ? pSessions.map(s => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${fmtDateTime(s.data_hora)}</strong> (${s.status})<p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Sem evolução registrada.'}</p></div>`).join('')
+        ? pSessions.map(s => `
+            <div onclick="openSessionModal('${s.id}')" class="p-3 rounded-xl border border-slate-200 hover:border-fuchsia-500 bg-slate-50 hover:bg-fuchsia-50/30 transition cursor-pointer">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <strong class="text-slate-900">${fmtDateTime(s.data_hora)}</strong>
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-white border border-slate-200 text-slate-700 capitalize">${s.status.replace('_', ' ')}</span>
+              </div>
+              <p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Clique para definir o status e registrar o relatório/anotações.'}</p>
+            </div>
+          `).join('')
         : '<p class="text-slate-400">Nenhuma sessão registrada.</p>';
 
       const pInst = state.instruments.filter(i => i.paciente_id === id);
@@ -1849,8 +1857,11 @@
       }
 
       closeModal('session-modal');
-      showToast('Agenda atualizada!');
+      showToast('Sessão e relatório salvos!');
       await loadAllData();
+      if (state.selectedPatientId) {
+        openPatientDetail(state.selectedPatientId);
+      }
     });
 
     function renderSessions() {
