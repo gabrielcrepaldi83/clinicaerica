@@ -2,10 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0f766e" />
   <title>Espaço Clínico — Gestão Psicológica</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
   <style>
     @media print {
       .no-print { display: none !important; }
@@ -16,6 +21,28 @@
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+
+  <!-- TELA DE BLOQUEIO POR INATIVIDADE -->
+  <div id="lock-screen" class="no-print fixed inset-0 z-50 hidden bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+      <div class="w-12 h-12 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">Tela Bloqueada por Sigilo</h2>
+        <p class="text-xs text-slate-500 mt-1">Inatividade detectada. Digite o PIN de desbloqueio.</p>
+      </div>
+      <form id="unlock-form" class="space-y-3">
+        <input id="unlock-pin" type="password" inputmode="numeric" placeholder="PIN" required
+          class="w-full text-center tracking-widest text-lg px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600" />
+        <p id="unlock-error" class="text-xs text-red-600 hidden">PIN incorreto.</p>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-teal-700 text-white text-sm font-semibold cursor-pointer">Desbloquear</button>
+      </form>
+      <button onclick="logout()" class="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer">Encerrar sessão completa</button>
+    </div>
+  </div>
 
   <!-- TELA DE LOGIN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-teal-900 via-slate-900 to-slate-800">
@@ -34,16 +61,15 @@
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">E-mail</label>
           <input id="login-email" type="email" required placeholder="psicologa@exemplo.com"
-            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm" />
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 text-sm" />
         </div>
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Senha</label>
           <input id="login-password" type="password" required placeholder="••••••••"
-            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm" />
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 text-sm" />
         </div>
         <p id="login-error" class="text-xs text-red-600 font-medium hidden"></p>
-        <button type="submit" id="login-btn"
-          class="w-full py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm transition cursor-pointer">
+        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm transition cursor-pointer">
           Entrar
         </button>
       </form>
@@ -52,7 +78,7 @@
 
   <!-- APLICAÇÃO PRINCIPAL -->
   <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row">
-    <!-- Barra Lateral (Desktop) -->
+    <!-- Barra Lateral -->
     <aside class="no-print w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between shrink-0">
       <div>
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -61,27 +87,21 @@
             <h2 id="brand-name" class="text-lg font-bold text-slate-900 leading-tight">Espaço Clínico</h2>
             <p id="brand-crp" class="text-xs text-slate-500"></p>
           </div>
+          <button onclick="lockNow()" title="Bloquear tela" class="p-2 rounded-lg text-slate-400 hover:text-teal-700 hover:bg-slate-100 cursor-pointer">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </button>
         </div>
 
         <nav class="p-3 flex md:flex-col gap-1 overflow-x-auto">
-          <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Visão Geral</span>
-          </button>
-          <button onclick="switchTab('agenda')" data-tab="agenda" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Agenda & Sessões</span>
-          </button>
-          <button onclick="switchTab('pacientes')" data-tab="pacientes" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Pacientes</span>
-          </button>
-          <button onclick="switchTab('instrumentos')" data-tab="instrumentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Instrumentos</span>
-          </button>
-          <button onclick="switchTab('financeiro')" data-tab="financeiro" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Financeiro</span>
-          </button>
-          <button onclick="switchTab('config')" data-tab="config" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">
-            <span>Configurações</span>
-          </button>
+          <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Visão Geral</button>
+          <button onclick="switchTab('agenda')" data-tab="agenda" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Agenda & Sessões</button>
+          <button onclick="switchTab('pacientes')" data-tab="pacientes" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Pacientes</button>
+          <button onclick="switchTab('instrumentos')" data-tab="instrumentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Instrumentos</button>
+          <button onclick="switchTab('documentos')" data-tab="documentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Documentos CFP</button>
+          <button onclick="switchTab('financeiro')" data-tab="financeiro" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Financeiro & IR</button>
+          <button onclick="switchTab('config')" data-tab="config" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Configurações</button>
         </nav>
       </div>
 
@@ -93,9 +113,8 @@
       </div>
     </aside>
 
-    <!-- Conteúdo -->
+    <!-- Conteúdo Principal -->
     <main class="no-print flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto">
-      <!-- TOAST / FEEDBACK -->
       <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg"></div>
 
       <!-- ABA: VISÃO GERAL -->
@@ -105,7 +124,7 @@
             <h1 class="text-2xl font-bold text-slate-900">Visão Geral</h1>
             <p id="today-label" class="text-sm text-slate-500"></p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Nova Sessão</button>
             <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
           </div>
@@ -130,9 +149,15 @@
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 p-5">
-          <h2 class="text-base font-bold text-slate-900 mb-3">Agenda de Hoje</h2>
-          <div id="dash-today-list" class="divide-y divide-slate-100 text-sm text-slate-600">Carregando...</div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
+            <h2 class="text-base font-bold text-slate-900 mb-3">Agenda de Hoje</h2>
+            <div id="dash-today-list" class="divide-y divide-slate-100 text-sm text-slate-600">Carregando...</div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-5">
+            <h2 class="text-base font-bold text-slate-900 mb-3">Alertas de Pacotes Mensais</h2>
+            <div id="dash-package-alerts" class="space-y-2.5 text-sm text-slate-600">Nenhum alerta.</div>
+          </div>
         </div>
       </section>
 
@@ -141,12 +166,29 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Agenda & Evoluções</h1>
-            <p class="text-sm text-slate-500">Marcar como <strong>Realizada</strong> ou <strong>Falta Cobrada</strong> lança automaticamente no financeiro.</p>
+            <p class="text-sm text-slate-500">Suporta agendamento recorrente, lembretes no WhatsApp e baixa automática.</p>
           </div>
-          <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button>
+          <div class="flex flex-wrap gap-2">
+            <div class="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 text-xs font-semibold">
+              <button onclick="setAgendaView('semana')" id="btn-view-semana" class="px-3 py-1.5 rounded-lg bg-teal-700 text-white cursor-pointer">Grade Semanal</button>
+              <button onclick="setAgendaView('lista')" id="btn-view-lista" class="px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer">Lista Completa</button>
+            </div>
+            <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button>
+          </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <!-- VISÃO SEMANAL -->
+        <div id="agenda-weekly-view" class="space-y-4">
+          <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-200">
+            <button onclick="shiftWeek(-7)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 cursor-pointer">← Semana Anterior</button>
+            <span id="week-range-label" class="text-sm font-bold text-slate-800"></span>
+            <button onclick="shiftWeek(7)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Próxima Semana →</button>
+          </div>
+          <div id="weekly-grid" class="grid grid-cols-1 md:grid-cols-6 gap-3"></div>
+        </div>
+
+        <!-- VISÃO LISTA -->
+        <div id="agenda-list-view" class="hidden bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
@@ -170,7 +212,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
-            <p class="text-sm text-slate-500">Cadastro, anamnese e histórico completo por paciente.</p>
+            <p class="text-sm text-slate-500">Cadastro, pacotes de sessões, anexos privados e histórico clínico.</p>
           </div>
           <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
         </div>
@@ -183,24 +225,60 @@
         <div id="patients-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
         <!-- FICHA DETALHADA DO PACIENTE -->
-        <div id="patient-detail-panel" class="hidden bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
-          <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div id="patient-detail-panel" class="hidden bg-white rounded-2xl border border-slate-200 p-6 space-y-6">
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <h2 id="detail-name" class="text-xl font-bold text-slate-900"></h2>
               <p id="detail-meta" class="text-sm text-slate-500"></p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
               <button onclick="editCurrentPatient()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Editar Cadastro</button>
               <button onclick="closePatientDetail()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 cursor-pointer">Fechar</button>
             </div>
           </div>
 
+          <!-- CONTROLE DE PACOTE MENSAL -->
+          <div id="detail-package-box" class="hidden bg-teal-50/70 border border-teal-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p class="text-xs font-bold uppercase text-teal-800">Pacote Mensal Ativo</p>
+              <p id="detail-package-status" class="text-sm font-semibold text-slate-800 mt-0.5"></p>
+            </div>
+            <button onclick="renewCurrentPatientPackage()" class="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold cursor-pointer">
+              Renovar Pacote & Gerar Cobrança
+            </button>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl">
             <div><span class="font-semibold text-slate-700">Telefone:</span> <span id="detail-phone"></span></div>
             <div><span class="font-semibold text-slate-700">Emergência:</span> <span id="detail-emergency"></span></div>
-            <div><span class="font-semibold text-slate-700">Valor Sessão:</span> <span id="detail-value"></span></div>
-            <div><span class="font-semibold text-slate-700">Cobrança:</span> <span id="detail-billing"></span></div>
+            <div><span class="font-semibold text-slate-700">Valor Referência:</span> <span id="detail-value"></span></div>
+            <div><span class="font-semibold text-slate-700">Modalidade Cobrança:</span> <span id="detail-billing"></span></div>
             <div class="md:col-span-2"><span class="font-semibold text-slate-700">Anamnese / Observações iniciais:</span> <p id="detail-anamnesis" class="mt-1 text-slate-600 whitespace-pre-line"></p></div>
+          </div>
+
+          <!-- GRÁFICO DE EVOLUÇÃO DE ESCORES -->
+          <div id="detail-chart-box" class="hidden border border-slate-200 rounded-xl p-4">
+            <h3 class="font-bold text-slate-900 text-sm mb-2">Evolução Quantitativa de Instrumentos</h3>
+            <div class="h-48"><canvas id="instrument-chart"></canvas></div>
+          </div>
+
+          <!-- ANEXOS PRIVADOS -->
+          <div class="border border-slate-200 rounded-xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-bold text-slate-900 text-sm">Documentos & Anexos Privados (Contratos, Termos, Testes)</h3>
+              <form id="upload-form" class="flex flex-wrap items-center gap-2">
+                <select id="upload-category" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
+                  <option value="Contrato">Contrato</option>
+                  <option value="Termo">Termo</option>
+                  <option value="Teste/Escala">Teste/Escala</option>
+                  <option value="Laudo/Exame">Laudo/Exame</option>
+                  <option value="Outro">Outro</option>
+                </select>
+                <input id="upload-file" type="file" required class="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700" />
+                <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold cursor-pointer">Anexar</button>
+              </form>
+            </div>
+            <div id="detail-attachments" class="divide-y divide-slate-100 text-xs"></div>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -221,7 +299,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Instrumentos & Testes</h1>
-            <p class="text-sm text-slate-500">Registro de escalas, inventários e protocolos aplicados por paciente.</p>
+            <p class="text-sm text-slate-500">Registro de escalas e inventários (escores numéricos geram gráfico na ficha do paciente).</p>
           </div>
           <button onclick="openInstrumentModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Registrar Instrumento</button>
         </div>
@@ -245,14 +323,79 @@
         </div>
       </section>
 
-      <!-- ABA: FINANCEIRO -->
+      <!-- ABA: DOCUMENTOS CFP -->
+      <section id="tab-documentos" class="tab-content hidden space-y-6 max-w-3xl">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">Gerador de Documentos Psicológicos</h1>
+          <p class="text-sm text-slate-500">Modelos timbrados prontos para impressão ou salvamento em PDF (Resolução CFP 06/2019).</p>
+        </div>
+
+        <form id="doc-generator-form" class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tipo de Documento</label>
+              <select id="doc-type" onchange="fillDocTemplate()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm">
+                <option value="declaracao">Declaração de Comparecimento</option>
+                <option value="atestado">Atestado Psicológico</option>
+                <option value="encaminhamento">Encaminhamento / Relatório Breve</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Paciente</label>
+              <select id="doc-paciente" onchange="fillDocTemplate()" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Data</label>
+              <input id="doc-data" type="date" onchange="fillDocTemplate()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Horário Início</label>
+              <input id="doc-inicio" type="time" value="14:00" onchange="fillDocTemplate()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Horário Término</label>
+              <input id="doc-fim" type="time" value="14:50" onchange="fillDocTemplate()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Texto do Documento (Editável)</label>
+            <textarea id="doc-body" rows="7" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed"></textarea>
+          </div>
+
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">
+            Gerar Documento / Salvar PDF
+          </button>
+        </form>
+      </section>
+
+      <!-- ABA: FINANCEIRO & IR -->
       <section id="tab-financeiro" class="tab-content hidden space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-slate-900">Financeiro & Recibos</h1>
-            <p class="text-sm text-slate-500">Controle de pagamentos, formas de recebimento e emissão de recibos/declarações.</p>
+            <h1 class="text-2xl font-bold text-slate-900">Financeiro, Recibos & Carnê-Leão</h1>
+            <p class="text-sm text-slate-500">Controle de recebimentos, recibos individuais e exportação para Imposto de Renda.</p>
           </div>
-          <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="exportIRCSV()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">Exportar CSV (Carnê-Leão)</button>
+            <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button>
+          </div>
+        </div>
+
+        <!-- FILTRO MÊS / ANO PARA RELATÓRIO -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="text-xs font-semibold uppercase text-slate-500">Filtrar Período:</label>
+            <input id="fin-filter-month" type="month" onchange="renderFinance()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm" />
+            <button onclick="document.getElementById('fin-filter-month').value=''; renderFinance();" class="text-xs text-teal-700 hover:underline cursor-pointer">Ver todos</button>
+          </div>
+          <div class="text-sm">
+            <span class="text-slate-500">Total Recebido no Filtro:</span>
+            <strong id="fin-filtered-total" class="text-emerald-700 ml-1">R$ 0,00</strong>
+          </div>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -278,7 +421,7 @@
       <section id="tab-config" class="tab-content hidden space-y-6 max-w-2xl">
         <div>
           <h1 class="text-2xl font-bold text-slate-900">Configurações do Consultório</h1>
-          <p class="text-sm text-slate-500">Esses dados aparecem automaticamente nos recibos e declarações.</p>
+          <p class="text-sm text-slate-500">Dados profissionais para recibos, documentos CFP, WhatsApp e bloqueio de segurança.</p>
         </div>
 
         <form id="config-form" class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
@@ -300,9 +443,19 @@
             <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Endereço do Consultório</label>
             <input id="cfg-endereco" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Chave Pix</label>
+              <input id="cfg-pix" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">PIN de Bloqueio (Inatividade 5 min)</label>
+              <input id="cfg-pin" type="password" inputmode="numeric" placeholder="Ex: 1234 (opcional)" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            </div>
+          </div>
           <div>
-            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Chave Pix</label>
-            <input id="cfg-pix" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Modelo de Mensagem WhatsApp (use {nome}, {data}, {hora})</label>
+            <textarea id="cfg-whatsapp" rows="2" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
           </div>
           <button type="submit" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold cursor-pointer">Salvar Configurações</button>
         </form>
@@ -322,7 +475,7 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF (para Recibo/IR)</label>
             <input id="pat-cpf" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
@@ -332,8 +485,8 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone</label>
-            <input id="pat-tel" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp</label>
+            <input id="pat-tel" type="text" placeholder="Ex: 16999999999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Contato de Emergência</label>
@@ -342,12 +495,12 @@
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor Sessão (R$)</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Valor (R$)</label>
             <input id="pat-valor" type="number" step="0.01" value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Cobrança</label>
-            <select id="pat-cobranca" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+            <select id="pat-cobranca" onchange="togglePackageFields()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
               <option value="por_sessao">Por sessão</option>
               <option value="pacote_mensal">Pacote mensal</option>
             </select>
@@ -359,6 +512,16 @@
               <option value="pausa">Pausa</option>
               <option value="alta">Alta</option>
             </select>
+          </div>
+        </div>
+        <div id="pat-package-fields" class="hidden grid grid-cols-2 gap-3 bg-teal-50 p-3 rounded-xl border border-teal-100">
+          <div>
+            <label class="block text-xs font-semibold text-teal-900 mb-1">Sessões no Pacote</label>
+            <input id="pat-pkg-total" type="number" min="1" value="4" class="w-full px-3 py-1.5 rounded-lg border border-teal-200 bg-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-teal-900 mb-1">Já Utilizadas</label>
+            <input id="pat-pkg-usadas" type="number" min="0" value="0" class="w-full px-3 py-1.5 rounded-lg border border-teal-200 bg-white text-sm" />
           </div>
         </div>
         <div>
@@ -373,7 +536,7 @@
     </div>
   </div>
 
-  <!-- MODAL: SESSÃO & EVOLUÇÃO -->
+  <!-- MODAL: SESSÃO & RECORRÊNCIA -->
   <div id="session-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
       <h3 class="text-lg font-bold text-slate-900">Sessão & Evolução Clínica</h3>
@@ -412,6 +575,25 @@
             <input id="ses-valor" type="number" step="0.01" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
         </div>
+
+        <!-- OPÇÃO DE RECORRÊNCIA (APENAS NOVO AGENDAMENTO) -->
+        <div id="ses-recurrence-box" class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Repetir Agendamento</label>
+              <select id="ses-repeat" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+                <option value="none">Não repetir (sessão única)</option>
+                <option value="7">Semanalmente</option>
+                <option value="14">Quinzenalmente</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Total de Encontros</label>
+              <input id="ses-repeat-count" type="number" min="2" max="24" value="4" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs" />
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Evolução / Relatório da Sessão</label>
           <textarea id="ses-evolucao" rows="4" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
@@ -448,8 +630,8 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Escore / Resultado</label>
-          <input id="inst-escore" type="text" placeholder="Ex: 18 pontos — Moderado" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Escore / Resultado (coloque o número primeiro para gerar gráfico)</label>
+          <input id="inst-escore" type="text" placeholder="Ex: 18 - Ansiedade Moderada" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Observações / Interpretação</label>
@@ -494,44 +676,80 @@
     </div>
   </div>
 
-  <!-- ÁREA DE IMPRESSÃO / RECIBO -->
+  <!-- ÁREA DE IMPRESSÃO / PDF -->
   <div id="print-area" class="print-only p-8 text-slate-900 max-w-2xl mx-auto"></div>
 
   <script>
-    // =========================================================================
-    // 1. CONFIGURAÇÃO DO SUPABASE — SUBSTITUA PELAS SUAS CHAVES DO PROJETO
-    // =========================================================================
-    const SUPABASE_URL = 'https://oifwuyoocdimkcspskzv.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_nQkwnzcjBJqtzkWUqGRIcw_JXaUMWnQ';
-
+    const SUPABASE_URL = window.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
+    let instrumentChartInstance = null;
+    let weekOffsetDays = 0;
+    let inactivityTimer = null;
+
     let state = {
       config: null,
       patients: [],
       sessions: [],
       instruments: [],
       finance: [],
+      attachments: [],
       selectedPatientId: null
     };
 
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
     const fmtDateTime = (dt) => dt ? new Date(dt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+    const fmtTime = (dt) => dt ? new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
     function showToast(msg) {
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.classList.remove('hidden');
-      setTimeout(() => el.classList.add('hidden'), 3000);
+      setTimeout(() => el.classList.add('hidden'), 3200);
     }
 
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
     // =========================================================================
-    // 2. AUTENTICAÇÃO
+    // BLOQUEIO POR INATIVIDADE (5 MINUTOS)
+    // =========================================================================
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      if (currentUser && state.config?.pin_bloqueio) {
+        inactivityTimer = setTimeout(lockNow, 5 * 60 * 1000);
+      }
+    }
+
+    function lockNow() {
+      if (!state.config?.pin_bloqueio) {
+        return showToast('Cadastre um PIN em Configurações para ativar o bloqueio.');
+      }
+      document.getElementById('unlock-pin').value = '';
+      document.getElementById('unlock-error').classList.add('hidden');
+      document.getElementById('lock-screen').classList.remove('hidden');
+    }
+
+    document.getElementById('unlock-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const typed = document.getElementById('unlock-pin').value;
+      if (typed === state.config?.pin_bloqueio) {
+        document.getElementById('lock-screen').classList.add('hidden');
+        resetInactivityTimer();
+      } else {
+        document.getElementById('unlock-error').classList.remove('hidden');
+      }
+    });
+
+    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt =>
+      document.addEventListener(evt, resetInactivityTimer, { passive: true })
+    );
+
+    // =========================================================================
+    // AUTENTICAÇÃO
     // =========================================================================
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -558,25 +776,29 @@
         document.getElementById('app-screen').classList.remove('hidden');
         document.getElementById('user-email-label').textContent = currentUser.email;
         document.getElementById('today-label').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('doc-data').value = new Date().toISOString().slice(0, 10);
         await loadAllData();
         switchTab('dashboard');
+        resetInactivityTimer();
       } else {
         currentUser = null;
         document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('lock-screen').classList.add('hidden');
         document.getElementById('login-screen').classList.remove('hidden');
       }
     });
 
     // =========================================================================
-    // 3. CARREGAMENTO E NAVEGAÇÃO
+    // CARREGAMENTO GERAL
     // =========================================================================
     async function loadAllData() {
-      const [cfgRes, patRes, sesRes, instRes, finRes] = await Promise.all([
+      const [cfgRes, patRes, sesRes, instRes, finRes, attRes] = await Promise.all([
         sb.from('configuracoes_profissional').select('*').eq('user_id', currentUser.id).maybeSingle(),
         sb.from('pacientes').select('*').order('nome_completo'),
         sb.from('sessoes').select('*').order('data_hora', { ascending: false }),
         sb.from('instrumentos_aplicados').select('*').order('data_aplicacao', { ascending: false }),
-        sb.from('financeiro').select('*').order('data_vencimento', { ascending: false })
+        sb.from('financeiro').select('*').order('data_vencimento', { ascending: false }),
+        sb.from('anexos_paciente').select('*').order('created_at', { ascending: false })
       ]);
 
       state.config = cfgRes.data;
@@ -584,14 +806,17 @@
       state.sessions = sesRes.data || [];
       state.instruments = instRes.data || [];
       state.finance = finRes.data || [];
+      state.attachments = attRes.data || [];
 
       applyConfigToUI();
       renderDashboard();
       renderPatients();
+      renderWeeklyAgenda();
       renderSessions();
       renderInstruments();
       renderFinance();
       populatePatientSelects();
+      fillDocTemplate();
     }
 
     function applyConfigToUI() {
@@ -603,6 +828,8 @@
         document.getElementById('cfg-telefone').value = state.config.telefone || '';
         document.getElementById('cfg-endereco').value = state.config.endereco_consultorio || '';
         document.getElementById('cfg-pix').value = state.config.chave_pix || '';
+        document.getElementById('cfg-pin').value = state.config.pin_bloqueio || '';
+        document.getElementById('cfg-whatsapp').value = state.config.msg_whatsapp || 'Olá {nome}, passando para confirmar nossa sessão {data} às {hora}.';
       }
     }
 
@@ -617,26 +844,47 @@
       });
     }
 
-    function getPatientName(id) {
-      return state.patients.find(p => p.id === id)?.nome_completo || 'Paciente';
-    }
+    function getPatient(id) { return state.patients.find(p => p.id === id); }
+    function getPatientName(id) { return getPatient(id)?.nome_completo || 'Paciente'; }
 
     function populatePatientSelects() {
       const options = `<option value="">Selecione...</option>` +
         state.patients.map(p => `<option value="${p.id}" data-valor="${p.valor_sessao || 0}">${p.nome_completo}</option>`).join('');
-      ['ses-paciente', 'inst-paciente', 'fin-paciente'].forEach(id => {
+      ['ses-paciente', 'inst-paciente', 'fin-paciente', 'doc-paciente'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = options;
       });
     }
 
     // =========================================================================
-    // 4. DASHBOARD
+    // WHATSAPP LEMBRETE 1 CLIQUE
+    // =========================================================================
+    function sendWhatsAppReminder(sessionId) {
+      const s = state.sessions.find(item => item.id === sessionId);
+      if (!s) return;
+      const p = getPatient(s.paciente_id);
+      const phone = (p?.telefone || '').replace(/\D/g, '');
+      if (!phone) return showToast('Paciente sem telefone cadastrado.');
+
+      const fullPhone = phone.length <= 11 ? '55' + phone : phone;
+      const template = state.config?.msg_whatsapp || 'Olá {nome}, passando para confirmar nossa sessão {data} às {hora}.';
+      const msg = template
+        .replace('{nome}', p.nome_completo.split(' ')[0])
+        .replace('{data}', fmtDate(s.data_hora.slice(0, 10)))
+        .replace('{hora}', fmtTime(s.data_hora));
+
+      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    // =========================================================================
+    // DASHBOARD
     // =========================================================================
     function renderDashboard() {
-      const ativos = state.patients.filter(p => p.status === 'ativo').length;
+      const ativos = state.patients.filter(p => p.status === 'ativo');
       const hojeISO = new Date().toISOString().slice(0, 10);
-      const sessoesHoje = state.sessions.filter(s => s.data_hora?.slice(0, 10) === hojeISO);
+      const sessoesHoje = state.sessions
+        .filter(s => s.data_hora?.slice(0, 10) === hojeISO)
+        .sort((a, b) => a.data_hora.localeCompare(b.data_hora));
 
       const pendente = state.finance
         .filter(f => f.status === 'pendente')
@@ -647,30 +895,51 @@
         .filter(f => f.status === 'pago' && (f.data_pagamento || f.data_vencimento || '').startsWith(mesAtual))
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      document.getElementById('kpi-pacientes').textContent = ativos;
+      document.getElementById('kpi-pacientes').textContent = ativos.length;
       document.getElementById('kpi-sessoes-hoje').textContent = sessoesHoje.length;
       document.getElementById('kpi-pendente').textContent = fmtBRL(pendente);
       document.getElementById('kpi-recebido-mes').textContent = fmtBRL(recebidoMes);
 
       const listEl = document.getElementById('dash-today-list');
-      if (!sessoesHoje.length) {
-        listEl.innerHTML = '<p class="py-3 text-slate-400">Nenhuma sessão agendada para hoje.</p>';
-      } else {
-        listEl.innerHTML = sessoesHoje.map(s => `
-          <div class="py-3 flex items-center justify-between gap-2">
+      listEl.innerHTML = !sessoesHoje.length
+        ? '<p class="py-3 text-slate-400">Nenhuma sessão agendada para hoje.</p>'
+        : sessoesHoje.map(s => `
+          <div class="py-3 flex flex-wrap items-center justify-between gap-2">
             <div>
+              <span class="font-bold text-teal-800 mr-2">${fmtTime(s.data_hora)}</span>
               <span class="font-semibold text-slate-900">${getPatientName(s.paciente_id)}</span>
-              <span class="text-xs text-slate-500 ml-2">${fmtDateTime(s.data_hora)} • ${s.modalidade}</span>
+              <span class="text-xs text-slate-500 ml-2 capitalize">(${s.modalidade} • ${s.status.replace('_', ' ')})</span>
             </div>
-            <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-teal-700 hover:underline cursor-pointer">Abrir sessão</button>
+            <div class="flex items-center gap-3">
+              <button onclick="sendWhatsAppReminder('${s.id}')" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">WhatsApp</button>
+              <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-teal-700 hover:underline cursor-pointer">Abrir</button>
+            </div>
           </div>
         `).join('');
-      }
+
+      const pkgPatients = ativos.filter(p => p.modelo_cobranca === 'pacote_mensal' && p.sessoes_pacote_total > 0);
+      const alertsEl = document.getElementById('dash-package-alerts');
+      alertsEl.innerHTML = !pkgPatients.length
+        ? '<p class="text-slate-400 text-xs">Nenhum paciente em pacote mensal configurado.</p>'
+        : pkgPatients.map(p => {
+          const restam = Math.max(0, (p.sessoes_pacote_total || 0) - (p.sessoes_pacote_usadas || 0));
+          return `
+            <div onclick="openPatientDetail('${p.id}'); switchTab('pacientes');" class="p-3 rounded-xl border ${restam <= 1 ? 'border-amber-300 bg-amber-50' : 'border-slate-100 bg-slate-50'} cursor-pointer">
+              <div class="font-semibold text-slate-900 text-xs">${p.nome_completo}</div>
+              <div class="text-xs text-slate-600 mt-0.5">${p.sessoes_pacote_usadas || 0} de ${p.sessoes_pacote_total} sessões usadas</div>
+            </div>
+          `;
+        }).join('');
     }
 
     // =========================================================================
-    // 5. PACIENTES
+    // PACIENTES, PACOTES & ANEXOS
     // =========================================================================
+    function togglePackageFields() {
+      const isPkg = document.getElementById('pat-cobranca').value === 'pacote_mensal';
+      document.getElementById('pat-package-fields').classList.toggle('hidden', !isPkg);
+    }
+
     function openPatientModal(patient = null) {
       document.getElementById('patient-form').reset();
       document.getElementById('pat-id').value = patient?.id || '';
@@ -684,14 +953,18 @@
         document.getElementById('pat-valor').value = patient.valor_sessao || 0;
         document.getElementById('pat-cobranca').value = patient.modelo_cobranca || 'por_sessao';
         document.getElementById('pat-status').value = patient.status || 'ativo';
+        document.getElementById('pat-pkg-total').value = patient.sessoes_pacote_total || 4;
+        document.getElementById('pat-pkg-usadas').value = patient.sessoes_pacote_usadas || 0;
         document.getElementById('pat-anamnese').value = patient.anamnese || '';
       }
+      togglePackageFields();
       openModal('patient-modal');
     }
 
     document.getElementById('patient-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('pat-id').value;
+      const cobranca = document.getElementById('pat-cobranca').value;
       const payload = {
         user_id: currentUser.id,
         nome_completo: document.getElementById('pat-nome').value.trim(),
@@ -700,7 +973,9 @@
         telefone: document.getElementById('pat-tel').value.trim() || null,
         contato_emergencia: document.getElementById('pat-emerg').value.trim() || null,
         valor_sessao: Number(document.getElementById('pat-valor').value || 0),
-        modelo_cobranca: document.getElementById('pat-cobranca').value,
+        modelo_cobranca: cobranca,
+        sessoes_pacote_total: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-total').value || 4) : 0,
+        sessoes_pacote_usadas: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-usadas').value || 0) : 0,
         status: document.getElementById('pat-status').value,
         anamnese: document.getElementById('pat-anamnese').value.trim() || null
       };
@@ -734,13 +1009,35 @@
             <h3 class="font-bold text-slate-900">${p.nome_completo}</h3>
             <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${p.status}</span>
           </div>
-          <p class="text-xs text-slate-500">${p.telefone || 'Sem telefone'} • ${fmtBRL(p.valor_sessao)}/sessão</p>
+          <p class="text-xs text-slate-500">
+            ${p.telefone || 'Sem telefone'} • ${fmtBRL(p.valor_sessao)}
+            ${p.modelo_cobranca === 'pacote_mensal' ? ` (Pacote: ${p.sessoes_pacote_usadas || 0}/${p.sessoes_pacote_total || 0})` : '/sessão'}
+          </p>
         </div>
       `).join('');
     }
 
+    async function renewCurrentPatientPackage() {
+      const p = getPatient(state.selectedPatientId);
+      if (!p) return;
+      await sb.from('pacientes').update({ sessoes_pacote_usadas: 0 }).eq('id', p.id);
+      if (Number(p.valor_sessao) > 0) {
+        await sb.from('financeiro').insert({
+          user_id: currentUser.id,
+          paciente_id: p.id,
+          descricao: `Renovação Pacote (${p.sessoes_pacote_total} sessões)`,
+          valor: Number(p.valor_sessao),
+          data_vencimento: new Date().toISOString().slice(0, 10),
+          status: 'pendente'
+        });
+      }
+      showToast('Pacote renovado e cobrança lançada!');
+      await loadAllData();
+      openPatientDetail(p.id);
+    }
+
     function openPatientDetail(id) {
-      const p = state.patients.find(item => item.id === id);
+      const p = getPatient(id);
       if (!p) return;
       state.selectedPatientId = id;
       document.getElementById('detail-name').textContent = p.nome_completo;
@@ -751,9 +1048,18 @@
       document.getElementById('detail-billing').textContent = p.modelo_cobranca === 'pacote_mensal' ? 'Pacote mensal' : 'Por sessão';
       document.getElementById('detail-anamnesis').textContent = p.anamnese || 'Nenhuma observação cadastrada.';
 
+      const pkgBox = document.getElementById('detail-package-box');
+      if (p.modelo_cobranca === 'pacote_mensal') {
+        pkgBox.classList.remove('hidden');
+        document.getElementById('detail-package-status').textContent =
+          `${p.sessoes_pacote_usadas || 0} de ${p.sessoes_pacote_total || 0} sessões realizadas neste ciclo`;
+      } else {
+        pkgBox.classList.add('hidden');
+      }
+
       const pSessions = state.sessions.filter(s => s.paciente_id === id);
       document.getElementById('detail-sessions').innerHTML = pSessions.length
-        ? pSessions.map(s => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${fmtDateTime(s.data_hora)}</strong> (${s.status})<p class="text-slate-600 mt-1">${s.evolucao_clinica || 'Sem evolução registrada.'}</p></div>`).join('')
+        ? pSessions.map(s => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${fmtDateTime(s.data_hora)}</strong> (${s.status})<p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Sem evolução registrada.'}</p></div>`).join('')
         : '<p class="text-slate-400">Nenhuma sessão registrada.</p>';
 
       const pInst = state.instruments.filter(i => i.paciente_id === id);
@@ -761,7 +1067,99 @@
         ? pInst.map(i => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${i.nome_instrumento}</strong> — ${fmtDate(i.data_aplicacao)}<p class="text-slate-600 mt-1">Resultado: ${i.escore_resultado || '—'}</p></div>`).join('')
         : '<p class="text-slate-400">Nenhum instrumento aplicado.</p>';
 
+      renderInstrumentChart(pInst);
+      renderAttachments(id);
       document.getElementById('patient-detail-panel').classList.remove('hidden');
+    }
+
+    function renderInstrumentChart(pInst) {
+      const numericItems = pInst
+        .map(i => ({ ...i, num: parseFloat((i.escore_resultado || '').replace(',', '.')) }))
+        .filter(i => !isNaN(i.num))
+        .reverse();
+
+      const chartBox = document.getElementById('detail-chart-box');
+      if (numericItems.length < 2) {
+        chartBox.classList.add('hidden');
+        return;
+      }
+
+      chartBox.classList.remove('hidden');
+      if (instrumentChartInstance) instrumentChartInstance.destroy();
+      const ctx = document.getElementById('instrument-chart').getContext('2d');
+      instrumentChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: numericItems.map(i => `${fmtDate(i.data_aplicacao)} (${i.nome_instrumento})`),
+          datasets: [{
+            label: 'Escore',
+            data: numericItems.map(i => i.num),
+            borderColor: '#0f766e',
+            backgroundColor: 'rgba(15, 118, 110, 0.15)',
+            tension: 0.25,
+            fill: true
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function renderAttachments(patientId) {
+      const list = state.attachments.filter(a => a.paciente_id === patientId);
+      const el = document.getElementById('detail-attachments');
+      el.innerHTML = !list.length
+        ? '<p class="py-2 text-slate-400">Nenhum arquivo anexado para este paciente.</p>'
+        : list.map(a => `
+          <div class="py-2 flex items-center justify-between gap-2">
+            <div>
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold mr-2">${a.categoria}</span>
+              <span class="font-medium text-slate-800">${a.nome_arquivo}</span>
+            </div>
+            <div class="space-x-3">
+              <button onclick="downloadAttachment('${a.caminho_storage}')" class="text-teal-700 font-semibold hover:underline cursor-pointer">Abrir / Baixar</button>
+              <button onclick="deleteAttachment('${a.id}', '${a.caminho_storage}')" class="text-red-600 hover:underline cursor-pointer">Excluir</button>
+            </div>
+          </div>
+        `).join('');
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!state.selectedPatientId) return;
+      const fileInput = document.getElementById('upload-file');
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const path = `${currentUser.id}/${state.selectedPatientId}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await sb.storage.from('prontuarios-anexos').upload(path, file);
+      if (upErr) return showToast('Erro ao enviar arquivo (verifique o bucket prontuarios-anexos).');
+
+      await sb.from('anexos_paciente').insert({
+        user_id: currentUser.id,
+        paciente_id: state.selectedPatientId,
+        nome_arquivo: file.name,
+        caminho_storage: path,
+        categoria: document.getElementById('upload-category').value
+      });
+
+      fileInput.value = '';
+      showToast('Arquivo anexado com sucesso!');
+      await loadAllData();
+      openPatientDetail(state.selectedPatientId);
+    });
+
+    async function downloadAttachment(path) {
+      const { data, error } = await sb.storage.from('prontuarios-anexos').createSignedUrl(path, 60);
+      if (error || !data?.signedUrl) return showToast('Não foi possível abrir o arquivo.');
+      window.open(data.signedUrl, '_blank');
+    }
+
+    async function deleteAttachment(id, path) {
+      await sb.storage.from('prontuarios-anexos').remove([path]);
+      await sb.from('anexos_paciente').delete().eq('id', id);
+      showToast('Anexo excluído.');
+      await loadAllData();
+      openPatientDetail(state.selectedPatientId);
     }
 
     function closePatientDetail() {
@@ -770,17 +1168,78 @@
     }
 
     function editCurrentPatient() {
-      const p = state.patients.find(item => item.id === state.selectedPatientId);
+      const p = getPatient(state.selectedPatientId);
       if (p) openPatientModal(p);
     }
 
     // =========================================================================
-    // 6. SESSÕES & AUTOMAÇÃO FINANCEIRA
+    // AGENDA SEMANAL, SESSÕES & RECORRÊNCIA
     // =========================================================================
+    function setAgendaView(view) {
+      const isSem = view === 'semana';
+      document.getElementById('agenda-weekly-view').classList.toggle('hidden', !isSem);
+      document.getElementById('agenda-list-view').classList.toggle('hidden', isSem);
+      document.getElementById('btn-view-semana').className = isSem
+        ? 'px-3 py-1.5 rounded-lg bg-teal-700 text-white cursor-pointer'
+        : 'px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer';
+      document.getElementById('btn-view-lista').className = !isSem
+        ? 'px-3 py-1.5 rounded-lg bg-teal-700 text-white cursor-pointer'
+        : 'px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer';
+    }
+
+    function shiftWeek(days) {
+      weekOffsetDays += days;
+      renderWeeklyAgenda();
+    }
+
+    function renderWeeklyAgenda() {
+      const today = new Date();
+      today.setDate(today.getDate() + weekOffsetDays);
+      const dayOfWeek = today.getDay();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+      const days = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days.push(d);
+      }
+
+      document.getElementById('week-range-label').textContent =
+        `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${days[5].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+
+      const grid = document.getElementById('weekly-grid');
+      grid.innerHTML = days.map(d => {
+        const iso = d.toISOString().slice(0, 10);
+        const daySessions = state.sessions
+          .filter(s => s.data_hora?.slice(0, 10) === iso)
+          .sort((a, b) => a.data_hora.localeCompare(b.data_hora));
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[220px]">
+            <div class="border-b border-slate-100 pb-2 mb-2">
+              <div class="text-xs font-bold uppercase text-teal-700">${d.toLocaleDateString('pt-BR', { weekday: 'short' })}</div>
+              <div class="text-sm font-bold text-slate-800">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
+            </div>
+            <div class="space-y-2 flex-1">
+              ${daySessions.length ? daySessions.map(s => `
+                <div onclick="openSessionModal('${s.id}')" class="p-2 rounded-xl border border-slate-200 hover:border-teal-500 bg-slate-50 cursor-pointer text-xs">
+                  <div class="font-bold text-slate-900">${fmtTime(s.data_hora)} • ${getPatientName(s.paciente_id).split(' ')[0]}</div>
+                  <div class="text-slate-500 capitalize mt-0.5">${s.status.replace('_', ' ')}</div>
+                </div>
+              `).join('') : '<p class="text-xs text-slate-300 pt-2">Livre</p>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     document.getElementById('ses-paciente').addEventListener('change', (e) => {
       const opt = e.target.selectedOptions[0];
+      const p = getPatient(e.target.value);
       if (opt?.dataset?.valor && !document.getElementById('ses-id').value) {
-        document.getElementById('ses-valor').value = opt.dataset.valor;
+        document.getElementById('ses-valor').value = p?.modelo_cobranca === 'pacote_mensal' ? 0 : opt.dataset.valor;
       }
     });
 
@@ -796,53 +1255,98 @@
       document.getElementById('ses-evolucao').value = s?.evolucao_clinica || '';
       document.getElementById('ses-finalizado').checked = Boolean(s?.prontuario_finalizado);
       document.getElementById('ses-evolucao').disabled = Boolean(s?.prontuario_finalizado);
+      document.getElementById('ses-recurrence-box').classList.toggle('hidden', Boolean(s));
       openModal('session-modal');
     }
 
     document.getElementById('session-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('ses-id').value;
+      const oldSession = id ? state.sessions.find(s => s.id === id) : null;
       const status = document.getElementById('ses-status').value;
       const valor = Number(document.getElementById('ses-valor').value || 0);
       const pacienteId = document.getElementById('ses-paciente').value;
-      const dataHora = new Date(document.getElementById('ses-datahora').value).toISOString();
+      const baseDate = new Date(document.getElementById('ses-datahora').value);
+      const paciente = getPatient(pacienteId);
 
-      const payload = {
-        user_id: currentUser.id,
-        paciente_id: pacienteId,
-        data_hora: dataHora,
-        modalidade: document.getElementById('ses-modalidade').value,
-        status,
-        valor_sessao: valor,
-        evolucao_clinica: document.getElementById('ses-evolucao').value.trim() || null,
-        prontuario_finalizado: document.getElementById('ses-finalizado').checked
-      };
+      if (id) {
+        const payload = {
+          paciente_id: pacienteId,
+          data_hora: baseDate.toISOString(),
+          modalidade: document.getElementById('ses-modalidade').value,
+          status,
+          valor_sessao: valor,
+          evolucao_clinica: document.getElementById('ses-evolucao').value.trim() || null,
+          prontuario_finalizado: document.getElementById('ses-finalizado').checked
+        };
+        const { error } = await sb.from('sessoes').update(payload).eq('id', id);
+        if (error) return showToast('Erro ao atualizar sessão.');
 
-      const res = id
-        ? await sb.from('sessoes').update(payload).eq('id', id).select().single()
-        : await sb.from('sessoes').insert(payload).select().single();
+        const becameDone = (status === 'realizada' || status === 'falta_cobrada') &&
+          (!oldSession || (oldSession.status !== 'realizada' && oldSession.status !== 'falta_cobrada'));
 
-      if (res.error) return showToast('Erro ao salvar sessão.');
-      const savedSession = res.data;
+        if (becameDone) {
+          if (paciente?.modelo_cobranca === 'pacote_mensal') {
+            await sb.from('pacientes')
+              .update({ sessoes_pacote_usadas: (paciente.sessoes_pacote_usadas || 0) + 1 })
+              .eq('id', pacienteId);
+          } else if (valor > 0 && !state.finance.some(f => f.sessao_id === id)) {
+            await sb.from('financeiro').insert({
+              user_id: currentUser.id,
+              paciente_id: pacienteId,
+              sessao_id: id,
+              descricao: `${status === 'falta_cobrada' ? 'Falta cobrada' : 'Sessão'} — ${fmtDate(baseDate.toISOString().slice(0, 10))}`,
+              valor,
+              data_vencimento: baseDate.toISOString().slice(0, 10),
+              status: 'pendente'
+            });
+          }
+        }
+      } else {
+        const repeatStep = document.getElementById('ses-repeat').value;
+        const count = repeatStep === 'none' ? 1 : Number(document.getElementById('ses-repeat-count').value || 1);
+        const rows = [];
 
-      // Gera cobrança automática se realizada ou falta cobrada e ainda não lançada
-      if ((status === 'realizada' || status === 'falta_cobrada') && valor > 0) {
-        const alreadyExists = state.finance.some(f => f.sessao_id === savedSession.id);
-        if (!alreadyExists) {
-          await sb.from('financeiro').insert({
+        for (let i = 0; i < count; i++) {
+          const dt = new Date(baseDate);
+          if (repeatStep !== 'none') dt.setDate(dt.getDate() + (i * Number(repeatStep)));
+          rows.push({
             user_id: currentUser.id,
             paciente_id: pacienteId,
-            sessao_id: savedSession.id,
-            descricao: `${status === 'falta_cobrada' ? 'Falta cobrada' : 'Sessão'} — ${fmtDate(dataHora.slice(0, 10))}`,
-            valor,
-            data_vencimento: dataHora.slice(0, 10),
-            status: 'pendente'
+            data_hora: dt.toISOString(),
+            modalidade: document.getElementById('ses-modalidade').value,
+            status: i === 0 ? status : 'agendada',
+            valor_sessao: valor,
+            evolucao_clinica: i === 0 ? (document.getElementById('ses-evolucao').value.trim() || null) : null,
+            prontuario_finalizado: i === 0 ? document.getElementById('ses-finalizado').checked : false
           });
+        }
+
+        const { data: inserted, error } = await sb.from('sessoes').insert(rows).select();
+        if (error) return showToast('Erro ao agendar sessões.');
+
+        const first = inserted?.[0];
+        if (first && (status === 'realizada' || status === 'falta_cobrada')) {
+          if (paciente?.modelo_cobranca === 'pacote_mensal') {
+            await sb.from('pacientes')
+              .update({ sessoes_pacote_usadas: (paciente.sessoes_pacote_usadas || 0) + 1 })
+              .eq('id', pacienteId);
+          } else if (valor > 0) {
+            await sb.from('financeiro').insert({
+              user_id: currentUser.id,
+              paciente_id: pacienteId,
+              sessao_id: first.id,
+              descricao: `${status === 'falta_cobrada' ? 'Falta cobrada' : 'Sessão'} — ${fmtDate(first.data_hora.slice(0, 10))}`,
+              valor,
+              data_vencimento: first.data_hora.slice(0, 10),
+              status: 'pendente'
+            });
+          }
         }
       }
 
       closeModal('session-modal');
-      showToast('Sessão salva!');
+      showToast('Agenda atualizada!');
       await loadAllData();
     });
 
@@ -859,15 +1363,16 @@
           <td class="py-3 px-4 capitalize">${s.modalidade}</td>
           <td class="py-3 px-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">${s.status.replace('_', ' ')}</span></td>
           <td class="py-3 px-4 text-xs">${s.prontuario_finalizado ? 'Finalizado' : 'Rascunho'}</td>
-          <td class="py-3 px-4 text-right">
-            <button onclick="openSessionModal('${s.id}')" class="text-teal-700 font-semibold hover:underline cursor-pointer">Abrir / Evoluir</button>
+          <td class="py-3 px-4 text-right space-x-3 whitespace-nowrap">
+            <button onclick="sendWhatsAppReminder('${s.id}')" class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer">WhatsApp</button>
+            <button onclick="openSessionModal('${s.id}')" class="text-xs font-semibold text-teal-700 hover:underline cursor-pointer">Abrir / Evoluir</button>
           </td>
         </tr>
       `).join('');
     }
 
     // =========================================================================
-    // 7. INSTRUMENTOS
+    // INSTRUMENTOS
     // =========================================================================
     function openInstrumentModal() {
       document.getElementById('instrument-form').reset();
@@ -918,7 +1423,62 @@
     }
 
     // =========================================================================
-    // 8. FINANCEIRO & RECIBO
+    // DOCUMENTOS PSICOLÓGICOS (CFP)
+    // =========================================================================
+    function fillDocTemplate() {
+      const type = document.getElementById('doc-type').value;
+      const p = getPatient(document.getElementById('doc-paciente').value);
+      const nome = p?.nome_completo || '[Nome do Paciente]';
+      const cpf = p?.cpf ? `, inscrito(a) no CPF sob o nº ${p.cpf}` : '';
+      const dataFmt = fmtDate(document.getElementById('doc-data').value);
+      const inicio = document.getElementById('doc-inicio').value;
+      const fim = document.getElementById('doc-fim').value;
+
+      if (type === 'declaracao') {
+        document.getElementById('doc-body').value =
+          `Declaro, para os devidos fins, que ${nome}${cpf}, compareceu a atendimento psicológico neste consultório na data de ${dataFmt}, no período das ${inicio} às ${fim}.`;
+      } else if (type === 'atestado') {
+        document.getElementById('doc-body').value =
+          `Atesto, para fins de justificativa laboral/escolar, que ${nome}${cpf}, encontra-se em acompanhamento psicológico sob meus cuidados profissionais, necessitando de afastamento de suas atividades na data de ${dataFmt} em decorrência de condições psicológicas observadas em avaliação clínica.`;
+      } else {
+        document.getElementById('doc-body').value =
+          `Encaminho ${nome}${cpf}, atualmente em acompanhamento psicoterapêutico, para avaliação complementar especializada.\n\nSíntese clínica e motivo do encaminhamento:\n[Descreva aqui as observações clínicas pertinentes conforme Resolução CFP nº 06/2019]`;
+      }
+    }
+
+    document.getElementById('doc-generator-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const type = document.getElementById('doc-type').value;
+      const titles = {
+        declaracao: 'Declaração de Comparecimento',
+        atestado: 'Atestado Psicológico',
+        encaminhamento: 'Encaminhamento Psicológico'
+      };
+      const cfg = state.config || {};
+      const bodyText = document.getElementById('doc-body').value;
+
+      document.getElementById('print-area').innerHTML = `
+        <div class="border border-slate-300 rounded-xl p-10 space-y-8">
+          <div class="border-b pb-4">
+            <h1 class="text-xl font-bold">${cfg.nome_completo || 'Psicóloga'}</h1>
+            <p class="text-sm text-slate-600">${cfg.crp || ''} ${cfg.endereco_consultorio ? '• ' + cfg.endereco_consultorio : ''}</p>
+          </div>
+          <h2 class="text-lg font-bold uppercase tracking-wider text-center">${titles[type]}</h2>
+          <p class="text-sm leading-relaxed whitespace-pre-line text-justify">${bodyText}</p>
+          <p class="text-sm text-slate-600 pt-6">Data: ${fmtDate(document.getElementById('doc-data').value)}</p>
+          <div class="pt-14 text-center text-sm">
+            <div class="border-t border-slate-400 w-72 mx-auto pt-2">
+              ${cfg.nome_completo || 'Assinatura e Carimbo'}<br/>
+              <span class="text-xs text-slate-500">${cfg.crp || ''}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      window.print();
+    });
+
+    // =========================================================================
+    // FINANCEIRO, RECIBO & EXPORTAÇÃO IR
     // =========================================================================
     function openFinanceModal() {
       document.getElementById('finance-form').reset();
@@ -958,7 +1518,7 @@
     function printReceipt(financeId) {
       const item = state.finance.find(f => f.id === financeId);
       if (!item) return;
-      const patient = state.patients.find(p => p.id === item.paciente_id);
+      const patient = getPatient(item.paciente_id);
       const cfg = state.config || {};
 
       document.getElementById('print-area').innerHTML = `
@@ -986,13 +1546,25 @@
       window.print();
     }
 
+    function getFilteredFinance() {
+      const monthFilter = document.getElementById('fin-filter-month')?.value;
+      if (!monthFilter) return state.finance;
+      return state.finance.filter(f => (f.data_pagamento || f.data_vencimento || '').startsWith(monthFilter));
+    }
+
     function renderFinance() {
+      const list = getFilteredFinance();
+      const totalPaid = list
+        .filter(f => f.status === 'pago')
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+      document.getElementById('fin-filtered-total').textContent = fmtBRL(totalPaid);
+
       const tbody = document.getElementById('finance-tbody');
-      if (!state.finance.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento financeiro.</td></tr>';
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento encontrado.</td></tr>';
         return;
       }
-      tbody.innerHTML = state.finance.map(f => `
+      tbody.innerHTML = list.map(f => `
         <tr>
           <td class="py-3 px-4 whitespace-nowrap">${fmtDate(f.data_vencimento)}</td>
           <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(f.paciente_id)}</td>
@@ -1011,8 +1583,35 @@
       `).join('');
     }
 
+    function exportIRCSV() {
+      const paidList = getFilteredFinance().filter(f => f.status === 'pago');
+      if (!paidList.length) return showToast('Nenhum recebimento pago no período selecionado.');
+
+      const header = ['Data Pagamento', 'Paciente', 'CPF', 'Descricao', 'Forma Pagamento', 'Valor'];
+      const rows = paidList.map(f => {
+        const p = getPatient(f.paciente_id);
+        return [
+          fmtDate(f.data_pagamento || f.data_vencimento),
+          `"${(p?.nome_completo || '').replace(/"/g, '""')}"`,
+          `"${p?.cpf || ''}"`,
+          `"${(f.descricao || '').replace(/"/g, '""')}"`,
+          `"${f.forma_pagamento || ''}"`,
+          Number(f.valor || 0).toFixed(2).replace('.', ',')
+        ].join(';');
+      });
+
+      const csv = '\uFEFF' + [header.join(';'), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio-ir-consultorio-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     // =========================================================================
-    // 9. CONFIGURAÇÕES
+    // CONFIGURAÇÕES
     // =========================================================================
     document.getElementById('config-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1023,6 +1622,8 @@
         telefone: document.getElementById('cfg-telefone').value.trim() || null,
         endereco_consultorio: document.getElementById('cfg-endereco').value.trim() || null,
         chave_pix: document.getElementById('cfg-pix').value.trim() || null,
+        pin_bloqueio: document.getElementById('cfg-pin').value.trim() || null,
+        msg_whatsapp: document.getElementById('cfg-whatsapp').value.trim() || null,
         updated_at: new Date().toISOString()
       };
 
@@ -1033,6 +1634,7 @@
       if (error) return showToast('Erro ao salvar configurações.');
       showToast('Configurações salvas!');
       await loadAllData();
+      resetInactivityTimer();
     });
   </script>
 </body>
