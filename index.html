@@ -1251,8 +1251,7 @@
       document.getElementById('detail-billing').textContent = p.modelo_cobranca === 'pacote_mensal' ? 'Pacote mensal' : 'Por sessão';
       document.getElementById('detail-demand').textContent = p.demanda_queixa || '—';
       document.getElementById('detail-plan').textContent = p.plano_tratamento || '—';
-      document.getElementById('detail-anamnesis').textContent = [p.anamnese, p.diagnostico_encerramento].filter(Boolean).join('
-') || 'Nenhuma observação cadastrada.';
+      document.getElementById('detail-anamnesis').textContent = [p.anamnese, p.diagnostico_encerramento].filter(Boolean).join('\n') || 'Nenhuma observação cadastrada.';
 
       const pkgBox = document.getElementById('detail-package-box');
       if (p.modelo_cobranca === 'pacote_mensal') {
@@ -1466,9 +1465,7 @@
 
       if (!text.trim()) return showToast('Não foi possível extrair texto do arquivo.');
       const textarea = document.getElementById('ses-evolucao');
-      textarea.value = textarea.value.trim() ? `${textarea.value.trim()}
-
-${text.trim()}` : text.trim();
+      textarea.value = textarea.value.trim() ? `${textarea.value.trim()}\n\n${text.trim()}` : text.trim();
       event.target.value = '';
       showToast('Texto importado para a evolução!');
     }
@@ -1728,10 +1725,7 @@ ${text.trim()}` : text.trim();
           `Atesto, para fins de justificativa laboral/escolar, que ${nome}${cpf}, encontra-se em acompanhamento psicológico sob meus cuidados profissionais, necessitando de afastamento de suas atividades na data de ${dataFmt} em decorrência de condições psicológicas observadas em avaliação clínica.`;
       } else {
         document.getElementById('doc-body').value =
-          `Encaminho ${nome}${cpf}, atualmente em acompanhamento psicoterapêutico, para avaliação complementar especializada.
-
-Síntese clínica e motivo do encaminhamento:
-[Descreva aqui as observações clínicas pertinentes conforme Resolução CFP nº 06/2019]`;
+          `Encaminho ${nome}${cpf}, atualmente em acompanhamento psicoterapêutico, para avaliação complementar especializada.\n\nSíntese clínica e motivo do encaminhamento:\n[Descreva aqui as observações clínicas pertinentes conforme Resolução CFP nº 06/2019]`;
       }
     }
 
@@ -1924,7 +1918,7 @@ Síntese clínica e motivo do encaminhamento:
 
     // IMPORTADOR DE PLANILHA
     function normalizeKey(str) {
-      return String(str || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+      return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     }
 
     function pickCol(row, candidates) {
@@ -2019,9 +2013,7 @@ Síntese clínica e motivo do encaminhamento:
             pickCol(r, ['objetivo', 'plano']) ? `Plano/Objetivos: ${pickCol(r, ['objetivo', 'plano'])}` : '',
             pickCol(r, ['evolucao', 'anotac', 'relato']) ? `Evolução: ${pickCol(r, ['evolucao', 'anotac', 'relato'])}` : '',
             pickCol(r, ['diagnostico', 'encerramento']) ? `Diagnóstico/Encerramento: ${pickCol(r, ['diagnostico', 'encerramento'])}` : ''
-          ].filter(Boolean).join('
-
-');
+          ].filter(Boolean).join('\n\n');
 
           await sb.from('sessoes').insert({
             user_id: currentUser.id,
