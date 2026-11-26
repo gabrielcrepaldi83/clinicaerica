@@ -1,0 +1,17 @@
+{
+  "name": "Anotaí Psi",
+  "short_name": "Anotaí Psi",
+  "start_url": "/clinicaerica/",
+  "scope": "/clinicaerica/",
+  "display": "standalone",
+  "background_color": "#a21caf",
+  "theme_color": "#a21caf",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
