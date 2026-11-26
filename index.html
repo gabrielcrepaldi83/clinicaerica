@@ -241,6 +241,11 @@
               <p id="detail-meta" class="text-sm text-slate-500 mt-0.5"></p>
             </div>
             <div class="flex flex-wrap gap-2">
+              <button onclick="openBillingWhatsAppModal()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">Cobrar WhatsApp</button>
+              <label class="px-3 py-1.5 rounded-lg bg-fuchsia-50 border border-fuchsia-200 text-fuchsia-800 text-xs font-semibold hover:bg-fuchsia-100 cursor-pointer">
+                Importar Relatórios / Documentos
+                <input type="file" multiple accept=".txt,.md,.docx,.pdf,.csv,.xlsx,.xls,.png,.jpg,.jpeg" onchange="importPatientReportsOrDocs(event)" class="hidden" />
+              </label>
               <button onclick="editCurrentPatient()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Editar Cadastro</button>
               <button onclick="closePatientDetail()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 cursor-pointer">Fechar</button>
             </div>
@@ -292,9 +297,10 @@
           <!-- ANEXOS PRIVADOS -->
           <div class="border border-slate-200 rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <h3 class="font-bold text-slate-900 text-sm">Documentos & Anexos Privados (Contratos, Termos, Testes, Arquivos IA)</h3>
+              <h3 class="font-bold text-slate-900 text-sm">Documentos & Anexos Privados (Relatórios de Sessão, Contratos, Termos, Testes)</h3>
               <form id="upload-form" class="flex flex-wrap items-center gap-2">
                 <select id="upload-category" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs">
+                  <option value="Relatório de Sessão">Relatório de Sessão</option>
                   <option value="Contrato">Contrato</option>
                   <option value="Termo">Termo</option>
                   <option value="Teste/Escala">Teste/Escala</option>
@@ -463,7 +469,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Telefone / WhatsApp</label>
-              <input id="cfg-telefone" type="text" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+              <input id="cfg-telefone" type="text" oninput="maskPhone(this)" maxlength="15" placeholder="(16) 99999-9999" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
             </div>
           </div>
           <div>
@@ -494,19 +500,25 @@
           <div>
             <h2 class="text-lg font-bold text-slate-900">Importador de Planilha</h2>
             <p class="text-xs text-slate-500 mt-0.5">
-              Importe planilhas (.csv, .xlsx, .xls) de <strong>Pacientes</strong> ou de <strong>Prontuário & Evoluções</strong> mapeando automaticamente colunas como nome, telefone, e-mail, endereço/CEP, escolaridade, profissão, observações, tags, origem, responsável, demanda, plano de tratamento, diagnóstico e sessões.
+              Importe planilhas (.csv, .xlsx, .xls) de <strong>Pacientes</strong> ou de <strong>Prontuário & Evoluções</strong>. Ao importar evoluções, você pode selecionar manualmente o paciente de destino ou deixar que o sistema identifique pela coluna da planilha.
             </p>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tipo de Planilha</label>
-              <select id="import-type" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <select id="import-type" onchange="toggleImportPatientField()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
                 <option value="pacientes">Cadastro de Pacientes</option>
                 <option value="evolucoes">Prontuário e Evoluções por Sessão</option>
               </select>
             </div>
-            <div>
+            <div id="import-patient-wrapper" class="hidden">
+              <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Paciente Destino (opcional)</label>
+              <select id="import-paciente" onchange="refreshImportPreview()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+                <option value="">Identificar automaticamente pela planilha</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
               <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Arquivo da Planilha</label>
               <input id="import-file" type="file" accept=".csv,.xlsx,.xls" onchange="previewSpreadsheet(event)"
                 class="w-full text-xs text-slate-600 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-fuchsia-50 file:text-fuchsia-700" />
@@ -538,13 +550,13 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">CPF (para Recibo/IR)</label>
-            <input id="pat-cpf" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <input id="pat-cpf" type="text" oninput="maskCPF(this)" maxlength="14" placeholder="000.000.000-00" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp</label>
-            <input id="pat-tel" type="text" placeholder="Ex: 16999999999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <input id="pat-tel" type="text" oninput="maskPhone(this)" maxlength="15" placeholder="(16) 99999-9999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
@@ -586,14 +598,14 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">CPF do Responsável</label>
-            <input id="pat-resp-cpf" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+            <input id="pat-resp-cpf" type="text" oninput="maskCPF(this)" maxlength="14" placeholder="000.000.000-00" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone Responsável</label>
-            <input id="pat-resp-tel" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+            <input id="pat-resp-tel" type="text" oninput="maskPhone(this)" maxlength="15" placeholder="(16) 99999-9999" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
           </div>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Valor (R$)</label>
             <input id="pat-valor" type="number" step="0.01" value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
@@ -606,6 +618,18 @@
             </select>
           </div>
           <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Dia Venc.</label>
+            <select id="pat-dia-venc" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="">Padrão</option>
+              <option value="1">Dia 1</option><option value="2">Dia 2</option><option value="3">Dia 3</option><option value="4">Dia 4</option><option value="5">Dia 5</option>
+              <option value="6">Dia 6</option><option value="7">Dia 7</option><option value="8">Dia 8</option><option value="9">Dia 9</option><option value="10">Dia 10</option>
+              <option value="11">Dia 11</option><option value="12">Dia 12</option><option value="13">Dia 13</option><option value="14">Dia 14</option><option value="15">Dia 15</option>
+              <option value="16">Dia 16</option><option value="17">Dia 17</option><option value="18">Dia 18</option><option value="19">Dia 19</option><option value="20">Dia 20</option>
+              <option value="21">Dia 21</option><option value="22">Dia 22</option><option value="23">Dia 23</option><option value="24">Dia 24</option><option value="25">Dia 25</option>
+              <option value="26">Dia 26</option><option value="27">Dia 27</option><option value="28">Dia 28</option><option value="29">Dia 29</option><option value="30">Dia 30</option><option value="31">Dia 31</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
             <select id="pat-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
               <option value="ativo">Ativo</option>
@@ -613,9 +637,9 @@
               <option value="alta">Alta</option>
             </select>
           </div>
-          <div>
+          <div class="col-span-2 sm:col-span-1">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Emergência</label>
-            <input id="pat-emerg" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+            <input id="pat-emerg" type="text" oninput="maskPhoneIfDigits(this)" maxlength="40" placeholder="(16) 99999-9999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
         </div>
         <div id="pat-package-fields" class="hidden grid grid-cols-2 gap-3 bg-fuchsia-50 p-3 rounded-xl border border-fuchsia-100">
@@ -706,7 +730,7 @@
         <input type="hidden" id="ses-id" />
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Paciente *</label>
-          <select id="ses-paciente" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></select>
+          <select id="ses-paciente" required onchange="onSessionPatientChange()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></select>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -843,6 +867,50 @@
     </div>
   </div>
 
+  <!-- MODAL: COBRANÇA WHATSAPP -->
+  <div id="billing-whatsapp-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Enviar Cobrança por WhatsApp</h3>
+          <p id="bill-wa-patient-info" class="text-xs text-slate-500 mt-0.5"></p>
+        </div>
+        <button type="button" onclick="closeModal('billing-whatsapp-modal')" class="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer">Fechar</button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-semibold uppercase text-slate-600">Sessões ainda não pagas</label>
+          <button type="button" onclick="toggleSelectAllUnpaid()" class="text-xs font-semibold text-fuchsia-700 hover:underline cursor-pointer">Marcar / Desmarcar todas</button>
+        </div>
+        <div id="bill-wa-sessions-list" class="max-h-48 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 text-xs"></div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Valor Total (R$)</label>
+          <input id="bill-wa-valor" type="number" step="0.01" oninput="updateBillingWhatsAppMessage(false)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Vencimento (DD/MM)</label>
+          <input id="bill-wa-vencimento" type="text" maxlength="5" placeholder="DD/MM" oninput="updateBillingWhatsAppMessage(false)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Mensagem de Cobrança</label>
+        <textarea id="bill-wa-mensagem" rows="4" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('billing-whatsapp-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+        <button type="button" onclick="sendBillingWhatsApp()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold cursor-pointer">
+          Enviar no WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ÁREA DE IMPRESSÃO / PDF -->
   <div id="print-area" class="print-only p-8 text-slate-900 max-w-2xl mx-auto"></div>
 
@@ -878,6 +946,38 @@
     const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
     const fmtDateTime = (dt) => dt ? new Date(dt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
     const fmtTime = (dt) => dt ? new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    // MÁSCARAS AUTOMÁTICAS: CPF E TELEFONE
+    function formatCPFValue(val) {
+      const digits = String(val || '').replace(/\D/g, '').slice(0, 11);
+      return digits
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+
+    function maskCPF(input) {
+      input.value = formatCPFValue(input.value);
+    }
+
+    function formatPhoneValue(val) {
+      const digits = String(val || '').replace(/\D/g, '').slice(0, 11);
+      if (!digits) return '';
+      if (digits.length <= 2) return `(${digits}`;
+      if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    }
+
+    function maskPhone(input) {
+      input.value = formatPhoneValue(input.value);
+    }
+
+    function maskPhoneIfDigits(input) {
+      const raw = input.value;
+      if (/^[\d()\s-]+$/.test(raw)) {
+        input.value = formatPhoneValue(raw);
+      }
+    }
 
     function showToast(msg) {
       const el = document.getElementById('toast');
@@ -995,7 +1095,7 @@
         document.getElementById('brand-crp').textContent = state.config.crp || '';
         document.getElementById('cfg-nome').value = state.config.nome_completo || '';
         document.getElementById('cfg-crp').value = state.config.crp || '';
-        document.getElementById('cfg-telefone').value = state.config.telefone || '';
+        document.getElementById('cfg-telefone').value = formatPhoneValue(state.config.telefone || '');
         document.getElementById('cfg-endereco').value = state.config.endereco_consultorio || '';
         document.getElementById('cfg-pix').value = state.config.chave_pix || '';
         document.getElementById('cfg-pin').value = state.config.pin_bloqueio || '';
@@ -1018,12 +1118,18 @@
     function getPatientName(id) { return getPatient(id)?.nome_completo || 'Paciente'; }
 
     function populatePatientSelects() {
-      const options = `<option value="">Selecione...</option>` +
-        state.patients.map(p => `<option value="${p.id}" data-valor="${p.valor_sessao || 0}">${p.nome_completo}</option>`).join('');
+      const baseOpts = state.patients.map(p => `<option value="${p.id}" data-valor="${p.valor_sessao || 0}">${p.nome_completo}</option>`).join('');
+      const options = `<option value="">Selecione...</option>` + baseOpts;
       ['ses-paciente', 'inst-paciente', 'fin-paciente', 'doc-paciente'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = options;
       });
+      const impEl = document.getElementById('import-paciente');
+      if (impEl) {
+        const prevVal = impEl.value;
+        impEl.innerHTML = `<option value="">Identificar automaticamente pela planilha</option>` + baseOpts;
+        if (prevVal) impEl.value = prevVal;
+      }
     }
 
     function sendWhatsAppReminder(sessionId) {
@@ -1105,12 +1211,13 @@
 
     function openPatientModal(patient = null) {
       document.getElementById('patient-form').reset();
+      document.getElementById('pat-dia-venc').value = '';
       document.getElementById('pat-id').value = patient?.id || '';
       document.getElementById('patient-modal-title').textContent = patient ? 'Editar Paciente' : 'Novo Paciente';
       if (patient) {
         document.getElementById('pat-nome').value = patient.nome_completo || '';
-        document.getElementById('pat-cpf').value = patient.cpf || '';
-        document.getElementById('pat-tel').value = patient.telefone || '';
+        document.getElementById('pat-cpf').value = formatCPFValue(patient.cpf || '');
+        document.getElementById('pat-tel').value = formatPhoneValue(patient.telefone || '');
         document.getElementById('pat-email').value = patient.email || '';
         document.getElementById('pat-nasc').value = patient.data_nascimento || '';
         document.getElementById('pat-escol').value = patient.escolaridade || '';
@@ -1119,10 +1226,11 @@
         document.getElementById('pat-end').value = patient.endereco_cep || '';
         document.getElementById('pat-tags').value = patient.tags || '';
         document.getElementById('pat-resp-nome').value = patient.responsavel_nome || '';
-        document.getElementById('pat-resp-cpf').value = patient.responsavel_cpf || '';
-        document.getElementById('pat-resp-tel').value = patient.responsavel_telefone || '';
+        document.getElementById('pat-resp-cpf').value = formatCPFValue(patient.responsavel_cpf || '');
+        document.getElementById('pat-resp-tel').value = formatPhoneValue(patient.responsavel_telefone || '');
         document.getElementById('pat-valor').value = patient.valor_sessao || 0;
         document.getElementById('pat-cobranca').value = patient.modelo_cobranca || 'por_sessao';
+        document.getElementById('pat-dia-venc').value = patient.dia_vencimento || '';
         document.getElementById('pat-status').value = patient.status || 'ativo';
         document.getElementById('pat-emerg').value = patient.contato_emergencia || '';
         document.getElementById('pat-pkg-total').value = patient.sessoes_pacote_total || 4;
@@ -1155,6 +1263,7 @@
         responsavel_cpf: document.getElementById('pat-resp-cpf').value.trim() || null,
         responsavel_telefone: document.getElementById('pat-resp-tel').value.trim() || null,
         valor_sessao: Number(document.getElementById('pat-valor').value || 0),
+        dia_vencimento: document.getElementById('pat-dia-venc').value ? Number(document.getElementById('pat-dia-venc').value) : null,
         modelo_cobranca: cobranca,
         sessoes_pacote_total: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-total').value || 4) : 0,
         sessoes_pacote_usadas: cobranca === 'pacote_mensal' ? Number(document.getElementById('pat-pkg-usadas').value || 0) : 0,
@@ -1297,6 +1406,102 @@
       renderInstrumentChart(pInst);
       renderAttachments(id);
       document.getElementById('patient-detail-panel').classList.remove('hidden');
+    }
+
+    // IMPORTAÇÃO RÁPIDA DE RELATÓRIOS DE SESSÃO OU OUTROS DOCUMENTOS NA ABA DO PACIENTE
+    async function importPatientReportsOrDocs(event) {
+      if (!state.selectedPatientId) return;
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+
+      let sessionsCreated = 0;
+      let docsAttached = 0;
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const isTextReport = ['txt', 'md', 'docx'].includes(ext);
+        const isSheet = ['csv', 'xlsx', 'xls'].includes(ext);
+        const lowerName = file.name.toLowerCase();
+        const looksLikeSessionReport = isTextReport && (lowerName.includes('relatorio') || lowerName.includes('sessao') || lowerName.includes('evolucao') || lowerName.includes('resumo'));
+
+        if (looksLikeSessionReport) {
+          let text = '';
+          if (ext === 'docx' && window.mammoth) {
+            const buf = await file.arrayBuffer();
+            const res = await window.mammoth.extractRawText({ arrayBuffer: buf });
+            text = res.value || '';
+          } else {
+            text = await file.text();
+          }
+
+          if (text.trim()) {
+            await sb.from('sessoes').insert({
+              user_id: currentUser.id,
+              paciente_id: state.selectedPatientId,
+              data_hora: new Date().toISOString(),
+              modalidade: 'presencial',
+              status: 'realizada',
+              valor_sessao: 0,
+              evolucao_clinica: text.trim()
+            });
+            sessionsCreated++;
+            continue;
+          }
+        }
+
+        if (isSheet && window.XLSX) {
+          const buf = await file.arrayBuffer();
+          const wb = window.XLSX.read(buf, { type: 'array' });
+          const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+          if (rows.length) {
+            for (const r of rows) {
+              const rawDate = pickCol(r, ['data', 'data/hora', 'data sessao']);
+              const parsedDate = rawDate ? new Date(rawDate) : new Date();
+              const isoDate = isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
+              const parts = [
+                pickCol(r, ['avaliacao', 'demanda', 'queixa']) ? `Demanda/Queixa: ${pickCol(r, ['avaliacao', 'demanda', 'queixa'])}` : '',
+                pickCol(r, ['objetivo', 'plano']) ? `Plano/Objetivos: ${pickCol(r, ['objetivo', 'plano'])}` : '',
+                pickCol(r, ['evolucao', 'anotac', 'relato']) ? `Evolução: ${pickCol(r, ['evolucao', 'anotac', 'relato'])}` : '',
+                pickCol(r, ['diagnostico', 'encerramento']) ? `Diagnóstico/Encerramento: ${pickCol(r, ['diagnostico', 'encerramento'])}` : ''
+              ].filter(Boolean).join('\n\n');
+
+              await sb.from('sessoes').insert({
+                user_id: currentUser.id,
+                paciente_id: state.selectedPatientId,
+                data_hora: isoDate,
+                modalidade: 'presencial',
+                status: 'realizada',
+                valor_sessao: 0,
+                evolucao_clinica: parts || JSON.stringify(r)
+              });
+              sessionsCreated++;
+            }
+            continue;
+          }
+        }
+
+        // Demais documentos (PDF, imagens, contratos, laudos, etc.) vão para anexos privados do paciente
+        const path = `${currentUser.id}/${state.selectedPatientId}/${Date.now()}_${file.name}`;
+        const { error: upErr } = await sb.storage.from('prontuarios-anexos').upload(path, file);
+        if (!upErr) {
+          await sb.from('anexos_paciente').insert({
+            user_id: currentUser.id,
+            paciente_id: state.selectedPatientId,
+            nome_arquivo: file.name,
+            caminho_storage: path,
+            categoria: isTextReport ? 'Relatório de Sessão' : 'Outro'
+          });
+          docsAttached++;
+        }
+      }
+
+      event.target.value = '';
+      const resumo = [];
+      if (sessionsCreated) resumo.push(`${sessionsCreated} relatório(s) de sessão`);
+      if (docsAttached) resumo.push(`${docsAttached} documento(s) anexado(s)`);
+      showToast(resumo.length ? `Importado: ${resumo.join(' e ')}.` : 'Nenhum arquivo importado.');
+      await loadAllData();
+      openPatientDetail(state.selectedPatientId);
     }
 
     function openMedicationModal(medId = null) {
@@ -1530,6 +1735,14 @@
       }).join('');
     }
 
+    function onSessionPatientChange() {
+      const isEditing = Boolean(document.getElementById('ses-id').value);
+      if (isEditing) return;
+      const pacienteId = document.getElementById('ses-paciente').value;
+      const p = getPatient(pacienteId);
+      document.getElementById('ses-valor').value = p ? Number(p.valor_sessao || 0) : 0;
+    }
+
     function openSessionModal(sessionId = null) {
       document.getElementById('session-form').reset();
       const s = sessionId ? state.sessions.find(item => item.id === sessionId) : null;
@@ -1538,7 +1751,7 @@
       document.getElementById('ses-datahora').value = s?.data_hora ? new Date(s.data_hora).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
       document.getElementById('ses-modalidade').value = s?.modalidade || 'presencial';
       document.getElementById('ses-status').value = s?.status || 'agendada';
-      document.getElementById('ses-valor').value = s?.valor_sessao || 0;
+      document.getElementById('ses-valor').value = s ? Number(s.valor_sessao || 0) : 0;
       document.getElementById('ses-evolucao').value = s?.evolucao_clinica || '';
       document.getElementById('ses-finalizado').checked = Boolean(s?.prontuario_finalizado);
       document.getElementById('ses-evolucao').disabled = Boolean(s?.prontuario_finalizado);
@@ -1712,7 +1925,7 @@
       const type = document.getElementById('doc-type').value;
       const p = getPatient(document.getElementById('doc-paciente').value);
       const nome = p?.nome_completo || '[Nome do Paciente]';
-      const cpf = p?.cpf ? `, inscrito(a) no CPF sob o nº ${p.cpf}` : '';
+      const cpf = p?.cpf ? `, inscrito(a) no CPF sob o nº ${formatCPFValue(p.cpf)}` : '';
       const dataFmt = fmtDate(document.getElementById('doc-data').value);
       const inicio = document.getElementById('doc-inicio').value;
       const fim = document.getElementById('doc-fim').value;
@@ -1813,7 +2026,7 @@
             <span class="text-lg font-bold bg-slate-100 px-3 py-1 rounded">${fmtBRL(item.valor)}</span>
           </div>
           <p class="text-sm leading-relaxed">
-            Recebi de <strong>${patient?.nome_completo || 'Paciente'}</strong>${patient?.cpf ? ` (CPF: ${patient.cpf})` : ''}, a importância de <strong>${fmtBRL(item.valor)}</strong>, referente a <strong>${item.descricao}</strong>${item.forma_pagamento ? ` (${item.forma_pagamento})` : ''}.
+            Recebi de <strong>${patient?.nome_completo || 'Paciente'}</strong>${patient?.cpf ? ` (CPF: ${formatCPFValue(patient.cpf)})` : ''}, a importância de <strong>${fmtBRL(item.valor)}</strong>, referente a <strong>${item.descricao}</strong>${item.forma_pagamento ? ` (${item.forma_pagamento})` : ''}.
           </p>
           <p class="text-sm text-slate-600 pt-6">Data de emissão: ${fmtDate(item.data_pagamento || new Date().toISOString().slice(0, 10))}</p>
           <div class="pt-10 text-center text-sm">
@@ -1874,7 +2087,7 @@
         return [
           fmtDate(f.data_pagamento || f.data_vencimento),
           `"${(p?.nome_completo || '').replace(/"/g, '""')}"`,
-          `"${p?.cpf || ''}"`,
+          `"${formatCPFValue(p?.cpf || '')}"`,
           `"${(f.descricao || '').replace(/"/g, '""')}"`,
           `"${f.forma_pagamento || ''}"`,
           Number(f.valor || 0).toFixed(2).replace('.', ',')
@@ -1931,6 +2144,32 @@
       return '';
     }
 
+    function toggleImportPatientField() {
+      const isEvo = document.getElementById('import-type').value === 'evolucoes';
+      document.getElementById('import-patient-wrapper').classList.toggle('hidden', !isEvo);
+      refreshImportPreview();
+    }
+
+    function refreshImportPreview() {
+      if (!pendingImportRows.length) return;
+      const type = document.getElementById('import-type').value;
+      const selectedPacId = document.getElementById('import-paciente')?.value || '';
+      const selectedPac = selectedPacId ? getPatient(selectedPacId) : null;
+
+      document.getElementById('import-preview-summary').textContent =
+        `${pendingImportRows.length} linha(s) encontrada(s) para importar como ${type === 'pacientes' ? 'Cadastro de Pacientes' : 'Prontuário e Evoluções'}` +
+        (type === 'evolucoes' && selectedPac ? ` → Paciente selecionado: ${selectedPac.nome_completo}` : '') + '.';
+
+      document.getElementById('import-preview-rows').innerHTML = pendingImportRows.slice(0, 10).map((r, idx) => {
+        const nomePlanilha = pickCol(r, ['nome', 'paciente', 'aluno', 'cliente']);
+        const nomeExibir = (type === 'evolucoes' && selectedPac) ? selectedPac.nome_completo : (nomePlanilha || '—');
+        const extra = type === 'pacientes'
+          ? pickCol(r, ['telefone', 'celular', 'whatsapp', 'email', 'cpf'])
+          : pickCol(r, ['data', 'evolucao', 'anotac', 'queixa', 'demanda']);
+        return `<div class="p-2 rounded bg-white border border-slate-200"><strong>#${idx + 1}:</strong> ${nomeExibir} <span class="text-slate-500">(${extra || 'sem detalhe'})</span></div>`;
+      }).join('');
+    }
+
     async function previewSpreadsheet(event) {
       const file = event.target.files[0];
       if (!file || !window.XLSX) return;
@@ -1941,19 +2180,7 @@
 
       if (!rows.length) return showToast('Planilha vazia.');
       pendingImportRows = rows;
-
-      const type = document.getElementById('import-type').value;
-      document.getElementById('import-preview-summary').textContent =
-        `${rows.length} linha(s) encontrada(s) para importar como ${type === 'pacientes' ? 'Cadastro de Pacientes' : 'Prontuário e Evoluções'}.`;
-
-      document.getElementById('import-preview-rows').innerHTML = rows.slice(0, 10).map((r, idx) => {
-        const nome = pickCol(r, ['nome', 'paciente', 'aluno', 'cliente']);
-        const extra = type === 'pacientes'
-          ? pickCol(r, ['telefone', 'celular', 'whatsapp', 'email', 'cpf'])
-          : pickCol(r, ['data', 'evolucao', 'anotac', 'queixa', 'demanda']);
-        return `<div class="p-2 rounded bg-white border border-slate-200"><strong>#${idx + 1}:</strong> ${nome || '—'} <span class="text-slate-500">(${extra || 'sem detalhe'})</span></div>`;
-      }).join('');
-
+      refreshImportPreview();
       document.getElementById('import-preview-box').classList.remove('hidden');
     }
 
@@ -1967,11 +2194,15 @@
             const nome = pickCol(r, ['nome', 'paciente', 'nome completo']);
             if (!nome) return null;
             const end = [pickCol(r, ['endereco', 'logradouro', 'rua']), pickCol(r, ['cep'])].filter(Boolean).join(' — ');
+            const rawCpf = pickCol(r, ['cpf']);
+            const rawTel = pickCol(r, ['telefone', 'celular', 'whatsapp', 'fone']);
+            const rawRespCpf = pickCol(r, ['cpf responsavel', 'cpf do responsavel']);
+            const rawRespTel = pickCol(r, ['telefone responsavel', 'celular responsavel']);
             return {
               user_id: currentUser.id,
               nome_completo: nome,
-              cpf: pickCol(r, ['cpf']) || null,
-              telefone: pickCol(r, ['telefone', 'celular', 'whatsapp', 'fone']) || null,
+              cpf: rawCpf ? formatCPFValue(rawCpf) : null,
+              telefone: rawTel ? formatPhoneValue(rawTel) : null,
               email: pickCol(r, ['email', 'e-mail']) || null,
               endereco_cep: end || null,
               escolaridade: pickCol(r, ['escolaridade', 'formacao']) || null,
@@ -1979,8 +2210,8 @@
               tags: pickCol(r, ['tag', 'marcador']) || null,
               origem_conhecimento: pickCol(r, ['conheceu', 'origem', 'indicacao']) || null,
               responsavel_nome: pickCol(r, ['responsavel']) || null,
-              responsavel_cpf: pickCol(r, ['cpf responsavel', 'cpf do responsavel']) || null,
-              responsavel_telefone: pickCol(r, ['telefone responsavel', 'celular responsavel']) || null,
+              responsavel_cpf: rawRespCpf ? formatCPFValue(rawRespCpf) : null,
+              responsavel_telefone: rawRespTel ? formatPhoneValue(rawRespTel) : null,
               demanda_queixa: pickCol(r, ['demanda', 'queixa']) || null,
               plano_tratamento: pickCol(r, ['plano', 'objetivo']) || null,
               diagnostico_encerramento: pickCol(r, ['diagnostico', 'encerramento', 'alta']) || null,
@@ -1996,10 +2227,16 @@
         if (error) return showToast('Erro ao importar pacientes.');
         showToast(`${payload.length} paciente(s) importado(s)!`);
       } else {
+        const selectedPacId = document.getElementById('import-paciente')?.value || '';
+        const manualPac = selectedPacId ? getPatient(selectedPacId) : null;
         let countImported = 0;
+
         for (const r of pendingImportRows) {
-          const nomePac = pickCol(r, ['paciente', 'nome']);
-          const pac = state.patients.find(p => normalizeKey(p.nome_completo) === normalizeKey(nomePac));
+          let pac = manualPac;
+          if (!pac) {
+            const nomePac = pickCol(r, ['paciente', 'nome']);
+            pac = state.patients.find(p => normalizeKey(p.nome_completo) === normalizeKey(nomePac));
+          }
           if (!pac) continue;
 
           const rawDate = pickCol(r, ['data', 'data/hora', 'data sessao']);
@@ -2026,6 +2263,9 @@
           });
           countImported++;
         }
+        if (!countImported) {
+          return showToast('Nenhum registro vinculado. Selecione o paciente acima ou verifique os nomes na planilha.');
+        }
         showToast(`${countImported} registro(s) de prontuário/evolução importado(s)!`);
       }
 
@@ -2033,6 +2273,132 @@
       document.getElementById('import-file').value = '';
       document.getElementById('import-preview-box').classList.add('hidden');
       await loadAllData();
+    }
+
+    // COBRANÇA POR WHATSAPP COM SESSÕES NÃO PAGAS
+    function getDefaultDueDateDDMM(patient) {
+      const now = new Date();
+      let targetDay = Number(patient?.dia_vencimento || 0);
+      if (!targetDay || targetDay < 1 || targetDay > 31) {
+        targetDay = now.getDate();
+      }
+      let year = now.getFullYear();
+      let month = now.getMonth();
+      if (targetDay < now.getDate()) {
+        month += 1;
+        if (month > 11) {
+          month = 0;
+          year += 1;
+        }
+      }
+      const maxDayInMonth = new Date(year, month + 1, 0).getDate();
+      const clampedDay = Math.min(targetDay, maxDayInMonth);
+      const dd = String(clampedDay).padStart(2, '0');
+      const mm = String(month + 1).padStart(2, '0');
+      return `${dd}/${mm}`;
+    }
+
+    function getUnpaidSessionsForPatient(patientId) {
+      const paidSessionIds = new Set(
+        state.finance
+          .filter(f => f.paciente_id === patientId && f.status === 'pago' && f.sessao_id)
+          .map(f => f.sessao_id)
+      );
+
+      const paidByDescOrDate = new Set(
+        state.finance
+          .filter(f => f.paciente_id === patientId && f.status === 'pago')
+          .map(f => `${f.data_vencimento || ''}|${Number(f.valor || 0).toFixed(2)}`)
+      );
+
+      return state.sessions
+        .filter(s => {
+          if (s.paciente_id !== patientId) return false;
+          if (s.status === 'cancelada' || s.status === 'agendada') return false;
+          if (paidSessionIds.has(s.id)) return false;
+          const dateISO = (s.data_hora || '').slice(0, 10);
+          const val = Number(s.valor_sessao || 0).toFixed(2);
+          if (paidByDescOrDate.has(`${dateISO}|${val}`)) return false;
+          return true;
+        })
+        .sort((a, b) => (a.data_hora || '').localeCompare(b.data_hora || ''));
+    }
+
+    function openBillingWhatsAppModal() {
+      const p = getPatient(state.selectedPatientId);
+      if (!p) return;
+
+      const unpaid = getUnpaidSessionsForPatient(p.id);
+      const vencStr = getDefaultDueDateDDMM(p);
+      document.getElementById('bill-wa-patient-info').textContent =
+        `${p.nome_completo} • ${p.telefone || 'Sem telefone cadastrado'}${p.dia_vencimento ? ` • Dia de vencimento: ${p.dia_vencimento}` : ''}`;
+      document.getElementById('bill-wa-vencimento').value = vencStr;
+
+      const listEl = document.getElementById('bill-wa-sessions-list');
+      if (!unpaid.length) {
+        listEl.innerHTML = '<p class="p-3 text-slate-400">Nenhuma sessão pendente encontrada. Você pode ajustar o valor e a mensagem abaixo.</p>';
+        document.getElementById('bill-wa-valor').value = Number(p.valor_sessao || 0).toFixed(2);
+      } else {
+        listEl.innerHTML = unpaid.map(s => {
+          const val = Number(s.valor_sessao || p.valor_sessao || 0);
+          const dtBR = fmtDate(s.data_hora?.slice(0, 10));
+          return `
+            <label class="p-2.5 flex items-center justify-between gap-2 hover:bg-slate-50 cursor-pointer">
+              <span class="flex items-center gap-2">
+                <input type="checkbox" class="bill-ses-checkbox rounded border-slate-300 text-fuchsia-700"
+                  data-date="${dtBR}" data-value="${val}" checked onchange="updateBillingWhatsAppMessage(true)" />
+                <span class="font-medium text-slate-800">${dtBR}</span>
+                <span class="text-slate-500 capitalize">(${s.status.replace('_', ' ')})</span>
+              </span>
+              <span class="font-semibold text-slate-900">${fmtBRL(val)}</span>
+            </label>
+          `;
+        }).join('');
+        recalcBillingTotalFromCheckboxes();
+      }
+
+      updateBillingWhatsAppMessage(false);
+      openModal('billing-whatsapp-modal');
+    }
+
+    function recalcBillingTotalFromCheckboxes() {
+      const checked = Array.from(document.querySelectorAll('.bill-ses-checkbox:checked'));
+      const total = checked.reduce((acc, el) => acc + Number(el.dataset.value || 0), 0);
+      document.getElementById('bill-wa-valor').value = total.toFixed(2);
+    }
+
+    function toggleSelectAllUnpaid() {
+      const boxes = Array.from(document.querySelectorAll('.bill-ses-checkbox'));
+      if (!boxes.length) return;
+      const allChecked = boxes.every(b => b.checked);
+      boxes.forEach(b => { b.checked = !allChecked; });
+      updateBillingWhatsAppMessage(true);
+    }
+
+    function updateBillingWhatsAppMessage(recalcValue = true) {
+      if (recalcValue) recalcBillingTotalFromCheckboxes();
+      const p = getPatient(state.selectedPatientId);
+      const firstName = (p?.nome_completo || 'Paciente').trim().split(/\s+/)[0];
+      const checked = Array.from(document.querySelectorAll('.bill-ses-checkbox:checked'));
+      const datesText = checked.length
+        ? checked.map(el => el.dataset.date).join(', ')
+        : '[datas das sessões selecionadas]';
+      const rawVal = Number(document.getElementById('bill-wa-valor')?.value || 0);
+      const valText = rawVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const venc = (document.getElementById('bill-wa-vencimento')?.value || '').trim() || 'DD/MM';
+
+      document.getElementById('bill-wa-mensagem').value =
+        `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valText}, vence no dia ${venc}. Qualquer dúvida, estou à disposição!`;
+    }
+
+    function sendBillingWhatsApp() {
+      const p = getPatient(state.selectedPatientId);
+      const phone = (p?.telefone || '').replace(/\D/g, '');
+      if (!phone) return showToast('Paciente sem telefone cadastrado.');
+      const fullPhone = phone.length <= 11 ? '55' + phone : phone;
+      const msg = (document.getElementById('bill-wa-mensagem')?.value || '').trim();
+      if (!msg) return showToast('Mensagem vazia.');
+      window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
   </script>
 </body>
