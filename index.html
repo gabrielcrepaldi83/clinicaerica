@@ -10,7 +10,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="config.js"></script>
   <style>
     @media print {
       .no-print { display: none !important; }
@@ -680,8 +679,8 @@
   <div id="print-area" class="print-only p-8 text-slate-900 max-w-2xl mx-auto"></div>
 
   <script>
-    const SUPABASE_URL = window.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
+    const SUPABASE_URL = 'https://oifwuyoocdimkcspskzv.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_nQkwnzcjBJqtzkWUqGRIcw_JXaUMWnQ';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
@@ -714,9 +713,6 @@
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-    // =========================================================================
-    // BLOQUEIO POR INATIVIDADE (5 MINUTOS)
-    // =========================================================================
     function resetInactivityTimer() {
       clearTimeout(inactivityTimer);
       if (currentUser && state.config?.pin_bloqueio) {
@@ -748,9 +744,6 @@
       document.addEventListener(evt, resetInactivityTimer, { passive: true })
     );
 
-    // =========================================================================
-    // AUTENTICAÇÃO
-    // =========================================================================
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('login-error');
@@ -788,9 +781,6 @@
       }
     });
 
-    // =========================================================================
-    // CARREGAMENTO GERAL
-    // =========================================================================
     async function loadAllData() {
       const [cfgRes, patRes, sesRes, instRes, finRes, attRes] = await Promise.all([
         sb.from('configuracoes_profissional').select('*').eq('user_id', currentUser.id).maybeSingle(),
@@ -856,9 +846,6 @@
       });
     }
 
-    // =========================================================================
-    // WHATSAPP LEMBRETE 1 CLIQUE
-    // =========================================================================
     function sendWhatsAppReminder(sessionId) {
       const s = state.sessions.find(item => item.id === sessionId);
       if (!s) return;
@@ -876,9 +863,6 @@
       window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
-    // =========================================================================
-    // DASHBOARD
-    // =========================================================================
     function renderDashboard() {
       const ativos = state.patients.filter(p => p.status === 'ativo');
       const hojeISO = new Date().toISOString().slice(0, 10);
@@ -932,9 +916,6 @@
         }).join('');
     }
 
-    // =========================================================================
-    // PACIENTES, PACOTES & ANEXOS
-    // =========================================================================
     function togglePackageFields() {
       const isPkg = document.getElementById('pat-cobranca').value === 'pacote_mensal';
       document.getElementById('pat-package-fields').classList.toggle('hidden', !isPkg);
@@ -1172,9 +1153,6 @@
       if (p) openPatientModal(p);
     }
 
-    // =========================================================================
-    // AGENDA SEMANAL, SESSÕES & RECORRÊNCIA
-    // =========================================================================
     function setAgendaView(view) {
       const isSem = view === 'semana';
       document.getElementById('agenda-weekly-view').classList.toggle('hidden', !isSem);
@@ -1371,9 +1349,6 @@
       `).join('');
     }
 
-    // =========================================================================
-    // INSTRUMENTOS
-    // =========================================================================
     function openInstrumentModal() {
       document.getElementById('instrument-form').reset();
       document.getElementById('inst-data').value = new Date().toISOString().slice(0, 10);
@@ -1422,9 +1397,6 @@
       `).join('');
     }
 
-    // =========================================================================
-    // DOCUMENTOS PSICOLÓGICOS (CFP)
-    // =========================================================================
     function fillDocTemplate() {
       const type = document.getElementById('doc-type').value;
       const p = getPatient(document.getElementById('doc-paciente').value);
@@ -1477,9 +1449,6 @@
       window.print();
     });
 
-    // =========================================================================
-    // FINANCEIRO, RECIBO & EXPORTAÇÃO IR
-    // =========================================================================
     function openFinanceModal() {
       document.getElementById('finance-form').reset();
       document.getElementById('fin-venc').value = new Date().toISOString().slice(0, 10);
@@ -1610,9 +1579,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // =========================================================================
-    // CONFIGURAÇÕES
-    // =========================================================================
     document.getElementById('config-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const payload = {
