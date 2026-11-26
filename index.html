@@ -1393,7 +1393,10 @@
           </div>
         `).join('');
 
-      const pSessions = state.sessions.filter(s => s.paciente_id === id);
+      const nowMs = Date.now();
+      const pSessions = state.sessions
+        .filter(s => s.paciente_id === id)
+        .sort((a, b) => Math.abs(new Date(a.data_hora || 0).getTime() - nowMs) - Math.abs(new Date(b.data_hora || 0).getTime() - nowMs));
       document.getElementById('detail-sessions').innerHTML = pSessions.length
         ? pSessions.map(s => `<div class="p-3 rounded-xl border border-slate-100 bg-slate-50"><strong>${fmtDateTime(s.data_hora)}</strong> (${s.status})<p class="text-slate-600 mt-1 whitespace-pre-line">${s.evolucao_clinica || 'Sem evolução registrada.'}</p></div>`).join('')
         : '<p class="text-slate-400">Nenhuma sessão registrada.</p>';
@@ -1856,7 +1859,11 @@
         tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhuma sessão cadastrada.</td></tr>';
         return;
       }
-      tbody.innerHTML = state.sessions.map(s => `
+      const nowMs = Date.now();
+      const orderedSessions = [...state.sessions].sort(
+        (a, b) => Math.abs(new Date(a.data_hora || 0).getTime() - nowMs) - Math.abs(new Date(b.data_hora || 0).getTime() - nowMs)
+      );
+      tbody.innerHTML = orderedSessions.map(s => `
         <tr>
           <td class="py-3 px-4 whitespace-nowrap">${fmtDateTime(s.data_hora)}</td>
           <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(s.paciente_id)}</td>
@@ -2375,20 +2382,26 @@
       updateBillingWhatsAppMessage(true);
     }
 
+    function formatDatesWithAnd(dates) {
+      if (!dates.length) return '[datas das sessões selecionadas]';
+      if (dates.length === 1) return dates[0];
+      return `${dates.slice(0, -1).join(', ')} e ${dates[dates.length - 1]}`;
+    }
+
     function updateBillingWhatsAppMessage(recalcValue = true) {
       if (recalcValue) recalcBillingTotalFromCheckboxes();
       const p = getPatient(state.selectedPatientId);
       const firstName = (p?.nome_completo || 'Paciente').trim().split(/\s+/)[0];
       const checked = Array.from(document.querySelectorAll('.bill-ses-checkbox:checked'));
-      const datesText = checked.length
-        ? checked.map(el => el.dataset.date).join(', ')
-        : '[datas das sessões selecionadas]';
+      const dates = checked.map(el => el.dataset.date).filter(Boolean);
+      const datesText = formatDatesWithAnd(dates);
+      const verbVencer = dates.length > 1 ? 'vencem' : 'vence';
       const rawVal = Number(document.getElementById('bill-wa-valor')?.value || 0);
       const valText = rawVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const venc = (document.getElementById('bill-wa-vencimento')?.value || '').trim() || 'DD/MM';
 
       document.getElementById('bill-wa-mensagem').value =
-        `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valText}, vence no dia ${venc}. Qualquer dúvida, estou à disposição!`;
+        `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valText}, ${verbVencer} no dia ${venc}. Qualquer dúvida, estou à disposição!`;
     }
 
     function sendBillingWhatsApp() {
