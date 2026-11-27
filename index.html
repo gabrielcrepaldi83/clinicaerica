@@ -873,6 +873,7 @@
           <div>
             <span class="font-semibold text-fuchsia-900">Filtro por quadro:</span>
             <span id="fin-active-card-filter-label" class="font-bold text-fuchsia-800 ml-1"></span>
+            <span id="fin-active-card-filter-total" class="font-semibold text-slate-700 ml-2"></span>
           </div>
           <button type="button" onclick="clearFinanceCardFilter()" class="font-semibold text-fuchsia-700 hover:underline cursor-pointer">
             Limpar filtro do quadro
@@ -3697,18 +3698,23 @@
       });
       const filterBar = document.getElementById('fin-active-card-filter-bar');
       const filterLabel = document.getElementById('fin-active-card-filter-label');
+      const list = getFilteredFinance();
+      const filteredSum = list.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+
       if (activeFinanceCardFilter) {
         const activeCardEl = document.getElementById(`fin-card-${activeFinanceCardFilter}`);
         if (activeCardEl) activeCardEl.classList.add('ring-2', 'ring-fuchsia-600', 'ring-offset-1');
         if (filterBar && filterLabel) {
           filterLabel.textContent = FINANCE_CARD_LABELS[activeFinanceCardFilter] || activeFinanceCardFilter;
+          const filterTotalEl = document.getElementById('fin-active-card-filter-total');
+          if (filterTotalEl) {
+            filterTotalEl.textContent = `(${list.length} item(ns) • Soma: ${fmtBRL(filteredSum)})`;
+          }
           filterBar.classList.remove('hidden');
         }
       } else if (filterBar) {
         filterBar.classList.add('hidden');
       }
-
-      const list = getFilteredFinance();
       const tbody = document.getElementById('finance-tbody');
       if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento encontrado.</td></tr>';
