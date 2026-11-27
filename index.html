@@ -798,9 +798,10 @@
             </div>
           </div>
 
-          <!-- LINHA PRINCIPAL (BASEADA NO RESUMO: TOTAL PREVISTO, RECEITAS PAGAS, RECEITAS À VENCER / NÃO PAGAS) -->
+          <!-- LINHA PRINCIPAL (BASEADA NO RESUMO: TOTAL PREVISTO, RECEITAS PAGAS, RECEITAS À VENCER) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex items-center gap-3.5">
+            <div id="fin-card-previsto" onclick="toggleFinanceCardFilter('previsto')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex items-center gap-3.5 cursor-pointer transition hover:border-slate-400">
               <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-base shrink-0">$</div>
               <div>
                 <p class="text-xs font-semibold text-slate-500">Total previsto</p>
@@ -809,7 +810,8 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-center gap-3.5">
+            <div id="fin-card-pagas" onclick="toggleFinanceCardFilter('pagas')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-center gap-3.5 cursor-pointer transition hover:border-emerald-400">
               <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-base shrink-0">↓</div>
               <div>
                 <p class="text-xs font-semibold text-slate-600">Receitas pagas</p>
@@ -818,7 +820,8 @@
               </div>
             </div>
 
-            <div class="rounded-2xl border border-rose-200 bg-rose-50/40 p-4 flex items-center gap-3.5">
+            <div id="fin-card-avencer" onclick="toggleFinanceCardFilter('avencer')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-rose-200 bg-rose-50/40 p-4 flex items-center gap-3.5 cursor-pointer transition hover:border-rose-400">
               <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-base shrink-0">↑</div>
               <div>
                 <p class="text-xs font-semibold text-slate-600">Receitas à vencer</p>
@@ -830,18 +833,31 @@
 
           <!-- LINHA SECUNDÁRIA: RECEITAS VENCIDAS E RECEITAS VENCIDAS DE PERÍODOS ANTERIORES -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="rounded-2xl border border-amber-300 bg-amber-50/60 p-4">
+            <div id="fin-card-vencidas" onclick="toggleFinanceCardFilter('vencidas')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-amber-300 bg-amber-50/60 p-4 cursor-pointer transition hover:border-amber-500">
               <p class="text-xs font-bold uppercase tracking-wider text-amber-900">Receitas vencidas</p>
               <p id="fin-sum-vencidas" class="text-xl font-bold text-amber-800 mt-1">R$ 0,00</p>
               <p class="text-[11px] text-amber-800/80 mt-0.5">Vencimento já passou no período e ainda não foram pagas</p>
             </div>
 
-            <div class="rounded-2xl border border-red-200 bg-red-50/50 p-4">
+            <div id="fin-card-anteriores" onclick="toggleFinanceCardFilter('anteriores')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-red-200 bg-red-50/50 p-4 cursor-pointer transition hover:border-red-400">
               <p class="text-xs font-bold uppercase tracking-wider text-red-900">Receitas vencidas de períodos anteriores</p>
               <p id="fin-sum-anteriores" class="text-xl font-bold text-red-700 mt-1">R$ 0,00</p>
-              <p class="text-[11px] text-red-700/80 mt-0.5">Todas as receitas não recebidas fora do período atual</p>
+              <p class="text-[11px] text-red-700/80 mt-0.5">Apenas receitas vencidas não recebidas fora do período atual</p>
             </div>
           </div>
+        </div>
+
+        <!-- INDICADOR DE FILTRO ATIVO POR QUADRO -->
+        <div id="fin-active-card-filter-bar" class="hidden bg-fuchsia-50 border border-fuchsia-200 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <span class="font-semibold text-fuchsia-900">Filtro por quadro:</span>
+            <span id="fin-active-card-filter-label" class="font-bold text-fuchsia-800 ml-1"></span>
+          </div>
+          <button type="button" onclick="clearFinanceCardFilter()" class="font-semibold text-fuchsia-700 hover:underline cursor-pointer">
+            Limpar filtro do quadro
+          </button>
         </div>
 
         <!-- TABELA DE LANÇAMENTOS -->
@@ -3411,30 +3427,101 @@
       if (btn) btn.textContent = isHidden ? 'Ocultar Modelo' : 'Editar Modelo de Mensagem';
     }
 
-    function getFilteredFinance() {
-      const monthFilter = document.getElementById('fin-filter-month')?.value;
-      if (!monthFilter) return state.finance;
-      const prevYM = getPreviousMonthYMFromYM(monthFilter);
-      return state.finance.filter(f => {
-        const vencYM = (f.data_vencimento || '').slice(0, 7);
-        const pagYM = (f.data_pagamento || '').slice(0, 7);
-        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
-        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
-        return vencYM === monthFilter || pagYM === monthFilter || sesYM === prevYM;
-      });
+    let activeFinanceCardFilter = null;
+
+    const FINANCE_CARD_LABELS = {
+      previsto: 'Total previsto (sessões cobráveis do mês anterior)',
+      pagas: 'Receitas pagas',
+      avencer: 'Receitas à vencer',
+      vencidas: 'Receitas vencidas',
+      anteriores: 'Receitas vencidas de períodos anteriores'
+    };
+
+    function toggleFinanceCardFilter(cardKey) {
+      activeFinanceCardFilter = activeFinanceCardFilter === cardKey ? null : cardKey;
+      renderFinance();
     }
 
-    function renderFinance() {
+    function clearFinanceCardFilter() {
+      activeFinanceCardFilter = null;
+      renderFinance();
+    }
+
+    function isFinanceItemOverdue(item, todayISO) {
+      return item.status !== 'pago' && Boolean(item.data_vencimento) && item.data_vencimento < todayISO;
+    }
+
+    function isFinanceItemUpcoming(item, todayISO) {
+      return item.status !== 'pago' && (!item.data_vencimento || item.data_vencimento >= todayISO);
+    }
+
+    function getFinancePeriodContext() {
       const monthInput = document.getElementById('fin-filter-month');
       if (monthInput && !monthInput.dataset.initialized) {
         monthInput.value = getCurrentMonthYM();
         monthInput.dataset.initialized = '1';
       }
-
       const selectedYM = monthInput?.value || '';
       const activeYM = selectedYM || getCurrentMonthYM();
       const sessionsMonthYM = getPreviousMonthYMFromYM(activeYM);
       const todayISO = new Date().toISOString().slice(0, 10);
+
+      const isItemInCurrentPeriod = (f) => {
+        if (!selectedYM) return true;
+        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        if (sesYM) return sesYM === sessionsMonthYM;
+        return (f.data_vencimento || '').startsWith(activeYM);
+      };
+
+      return { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod };
+    }
+
+    function getFilteredFinance() {
+      const { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod } = getFinancePeriodContext();
+
+      if (activeFinanceCardFilter === 'previsto') {
+        const billedSessionIds = new Set(
+          state.sessions
+            .filter(s => (s.data_hora || '').slice(0, 10).startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status))
+            .map(s => s.id)
+        );
+        return state.finance.filter(f => {
+          if (f.sessao_id && billedSessionIds.has(f.sessao_id)) return true;
+          const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+          return (ses?.data_hora || '').slice(0, 10).startsWith(sessionsMonthYM) && isChargedSessionStatus(ses?.status);
+        });
+      }
+
+      if (activeFinanceCardFilter === 'pagas') {
+        return state.finance.filter(f => f.status === 'pago' && isItemInCurrentPeriod(f));
+      }
+
+      if (activeFinanceCardFilter === 'avencer') {
+        return state.finance.filter(f => isItemInCurrentPeriod(f) && isFinanceItemUpcoming(f, todayISO));
+      }
+
+      if (activeFinanceCardFilter === 'vencidas') {
+        return state.finance.filter(f => isItemInCurrentPeriod(f) && isFinanceItemOverdue(f, todayISO));
+      }
+
+      if (activeFinanceCardFilter === 'anteriores') {
+        return state.finance.filter(f => !isItemInCurrentPeriod(f) && isFinanceItemOverdue(f, todayISO));
+      }
+
+      if (!selectedYM) return state.finance;
+      const prevYM = getPreviousMonthYMFromYM(selectedYM);
+      return state.finance.filter(f => {
+        const vencYM = (f.data_vencimento || '').slice(0, 7);
+        const pagYM = (f.data_pagamento || '').slice(0, 7);
+        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        return vencYM === activeYM || pagYM === activeYM || sesYM === prevYM;
+      });
+    }
+
+    function renderFinance() {
+      const { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod } = getFinancePeriodContext();
 
       // 1) Total previsto: soma de todas as sessões do mês anterior que geraram cobrança
       const billedSessionsPrevMonth = state.sessions.filter(s => {
@@ -3451,15 +3538,6 @@
       if (prevSubEl) {
         prevSubEl.textContent = `Sessões de ${prevLabel} (${billedSessionsPrevMonth.length} cobrável(is))`;
       }
-
-      // Helper para identificar se o lançamento pertence ao período atual (sessões do mês anterior ou vencimento no mês ativo)
-      const isItemInCurrentPeriod = (f) => {
-        if (!selectedYM) return true;
-        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
-        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
-        if (sesYM) return sesYM === sessionsMonthYM;
-        return (f.data_vencimento || '').startsWith(activeYM);
-      };
 
       // 2) Receitas pagas referente ao período atual + observação se houver recebimento atrasado de período anterior
       const paidItems = state.finance.filter(f => f.status === 'pago');
@@ -3484,20 +3562,19 @@
         }
       }
 
-      // 3) Não pagos: à vencer (data de vencimento ainda não passou), vencidas (já passou no período), e vencidas de períodos anteriores
-      const unpaidAll = state.finance.filter(f => f.status !== 'pago');
-      const unpaidCurrent = unpaidAll.filter(f => isItemInCurrentPeriod(f));
-      const unpaidOtherPeriods = unpaidAll.filter(f => !isItemInCurrentPeriod(f));
+      // 3) Não pagos: à vencer, vencidas no período, e APENAS vencidas de períodos anteriores
+      const unpaidCurrent = state.finance.filter(f => f.status !== 'pago' && isItemInCurrentPeriod(f));
+      const unpaidOtherPeriodsOverdue = state.finance.filter(f => !isItemInCurrentPeriod(f) && isFinanceItemOverdue(f, todayISO));
 
       const receitasAVencer = unpaidCurrent
-        .filter(f => (f.data_vencimento || '') >= todayISO)
+        .filter(f => isFinanceItemUpcoming(f, todayISO))
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
       const receitasVencidas = unpaidCurrent
-        .filter(f => (f.data_vencimento || '') && (f.data_vencimento || '') < todayISO)
+        .filter(f => isFinanceItemOverdue(f, todayISO))
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      const receitasVencidasAnteriores = unpaidOtherPeriods
+      const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
       document.getElementById('fin-sum-previsto').textContent = fmtBRL(totalPrevisto);
@@ -3506,6 +3583,23 @@
       document.getElementById('fin-sum-vencidas').textContent = fmtBRL(receitasVencidas);
       document.getElementById('fin-sum-anteriores').textContent = fmtBRL(receitasVencidasAnteriores);
 
+      // Destacar visualmente o quadro selecionado
+      document.querySelectorAll('.fin-summary-card').forEach(card => {
+        card.classList.remove('ring-2', 'ring-fuchsia-600', 'ring-offset-1');
+      });
+      const filterBar = document.getElementById('fin-active-card-filter-bar');
+      const filterLabel = document.getElementById('fin-active-card-filter-label');
+      if (activeFinanceCardFilter) {
+        const activeCardEl = document.getElementById(`fin-card-${activeFinanceCardFilter}`);
+        if (activeCardEl) activeCardEl.classList.add('ring-2', 'ring-fuchsia-600', 'ring-offset-1');
+        if (filterBar && filterLabel) {
+          filterLabel.textContent = FINANCE_CARD_LABELS[activeFinanceCardFilter] || activeFinanceCardFilter;
+          filterBar.classList.remove('hidden');
+        }
+      } else if (filterBar) {
+        filterBar.classList.add('hidden');
+      }
+
       const list = getFilteredFinance();
       const tbody = document.getElementById('finance-tbody');
       if (!list.length) {
@@ -3513,7 +3607,7 @@
         return;
       }
       tbody.innerHTML = list.map(f => {
-        const isVencido = f.status !== 'pago' && (f.data_vencimento || '') && (f.data_vencimento || '') < todayISO;
+        const isVencido = isFinanceItemOverdue(f, todayISO);
         return `
         <tr>
           <td class="py-3 px-4 whitespace-nowrap">${fmtDate(f.data_vencimento)}</td>
