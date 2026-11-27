@@ -266,6 +266,31 @@
             <div id="dash-package-alerts" class="space-y-2.5 text-sm text-slate-600">Nenhum alerta.</div>
           </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- COBRANÇAS GERADAS (5 DIAS ANTES DO VENCIMENTO) -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 class="text-base font-bold text-slate-900">Cobranças Geradas</h2>
+                <p class="text-xs text-slate-500">Fechamento automático até o último dia do mês anterior (exibido a partir de 5 dias antes do vencimento).</p>
+              </div>
+              <button type="button" onclick="sendSelectedGeneratedChargesWhatsApp()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">
+                Enviar Selecionados (WhatsApp)
+              </button>
+            </div>
+            <div id="dash-generated-charges" class="divide-y divide-slate-100 text-xs text-slate-700">Nenhuma cobrança gerada para o período.</div>
+          </div>
+
+          <!-- LISTA DE ESPERA -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Lista de Espera</h2>
+              <p class="text-xs text-slate-500">Pacientes em lista de espera ordenados pela data de cadastro (mais antigo primeiro).</p>
+            </div>
+            <div id="dash-waitlist" class="divide-y divide-slate-100 text-sm text-slate-700">Nenhum paciente em lista de espera.</div>
+          </div>
+        </div>
       </section>
 
       <!-- ABA: AGENDA & SESSÕES -->
@@ -765,6 +790,9 @@
               <option value="ativo">Ativo</option>
               <option value="pausa">Pausa</option>
               <option value="alta">Alta</option>
+              <option value="desistencia">Desistência</option>
+              <option value="falecido">Falecido</option>
+              <option value="lista_de_espera">Lista de espera</option>
             </select>
           </div>
           <div>
@@ -1442,6 +1470,171 @@
             </div>
           `;
         }).join('');
+
+      renderGeneratedChargesDashboard();
+      renderWaitlistDashboard();
+    }
+
+    function getLastDayOfPreviousMonthISO() {
+      const now = new Date();
+      const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastOfPrevMonth = new Date(firstOfCurrentMonth.getTime() - 1);
+      return lastOfPrevMonth.toISOString().slice(0, 10);
+    }
+
+    function getDueDateInfoForPatient(patient) {
+      const now = new Date();
+      const targetDay = Number(patient?.dia_vencimento || 0);
+      if (!targetDay || targetDay < 1 || targetDay > 31) {
+        return { isWithin5Days: false, ddmm: 'DD/MM', dueDateObj: null };
+      }
+
+      const candidates = [
+        new Date(now.getFullYear(), now.getMonth(), Math.min(targetDay, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())),
+        new Date(now.getFullYear(), now.getMonth() + 1, Math.min(targetDay, new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate()))
+      ];
+
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+      for (const dueObj of candidates) {
+        const dueStart = new Date(dueObj.getFullYear(), dueObj.getMonth(), dueObj.getDate()).getTime();
+        const diffDays = Math.ceil((dueStart - startOfToday) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 5 && diffDays >= -15) {
+          const dd = String(dueObj.getDate()).padStart(2, '0');
+          const mm = String(dueObj.getMonth() + 1).padStart(2, '0');
+          return { isWithin5Days: true, ddmm: `${dd}/${mm}`, dueDateObj: dueObj };
+        }
+      }
+
+      const fallback = candidates[0];
+      const dd = String(fallback.getDate()).padStart(2, '0');
+      const mm = String(fallback.getMonth() + 1).padStart(2, '0');
+      return { isWithin5Days: false, ddmm: `${dd}/${mm}`, dueDateObj: fallback };
+    }
+
+    function getUnpaidSessionsUpToPrevMonthEnd(patientId) {
+      const cutoffISO = getLastDayOfPreviousMonthISO();
+      const paidSessionIds = new Set(
+        state.finance
+          .filter(f => f.paciente_id === patientId && f.status === 'pago' && f.sessao_id)
+          .map(f => f.sessao_id)
+      );
+
+      const paidByDescOrDate = new Set(
+        state.finance
+          .filter(f => f.paciente_id === patientId && f.status === 'pago')
+          .map(f => `${f.data_vencimento || ''}|${Number(f.valor || 0).toFixed(2)}`)
+      );
+
+      return state.sessions
+        .filter(s => {
+          if (s.paciente_id !== patientId) return false;
+          const dateISO = (s.data_hora || '').slice(0, 10);
+          if (!dateISO || dateISO > cutoffISO) return false;
+          if (['agendada', 'falta_justificada', 'cancelamento_nao_cobrado', 'cancelado_profissional', 'cancelada'].includes(s.status)) return false;
+          if (paidSessionIds.has(s.id)) return false;
+          const val = Number(s.valor_sessao || 0).toFixed(2);
+          if (paidByDescOrDate.has(`${dateISO}|${val}`)) return false;
+          return true;
+        })
+        .sort((a, b) => (a.data_hora || '').localeCompare(b.data_hora || ''));
+    }
+
+    function renderGeneratedChargesDashboard() {
+      const container = document.getElementById('dash-generated-charges');
+      if (!container) return;
+
+      const items = [];
+      for (const p of state.patients) {
+        if (p.status !== 'ativo') continue;
+        const dueInfo = getDueDateInfoForPatient(p);
+        if (!dueInfo.isWithin5Days) continue;
+
+        const unpaidPrev = getUnpaidSessionsUpToPrevMonthEnd(p.id);
+        if (!unpaidPrev.length) continue;
+
+        const totalVal = unpaidPrev.reduce((acc, s) => acc + Number(s.valor_sessao || p.valor_sessao || 0), 0);
+        const datesBR = unpaidPrev.map(s => fmtDate(s.data_hora?.slice(0, 10)));
+        const firstName = (p.nome_completo || 'Paciente').trim().split(/\s+/)[0];
+        const datesText = formatDatesWithAnd(datesBR);
+        const verbVencer = datesBR.length > 1 ? 'vencem' : 'vence';
+        const valFormatted = totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const msg = `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valFormatted}, ${verbVencer} no dia ${dueInfo.ddmm}. Qualquer dúvida, estou à disposição!`;
+
+        items.push({
+          patientId: p.id,
+          patientName: p.nome_completo,
+          phone: p.telefone || '',
+          ddmm: dueInfo.ddmm,
+          totalVal,
+          count: unpaidPrev.length,
+          msg
+        });
+      }
+
+      if (!items.length) {
+        container.innerHTML = '<p class="py-2 text-slate-400">Nenhuma cobrança fechada a 5 dias do vencimento.</p>';
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <label class="py-2.5 flex items-start justify-between gap-2 cursor-pointer hover:bg-slate-50 px-1 rounded-lg">
+          <span class="flex items-start gap-2">
+            <input type="checkbox" class="gen-charge-checkbox mt-0.5 rounded border-slate-300 text-emerald-600"
+              data-phone="${item.phone}" data-msg="${encodeURIComponent(item.msg)}" checked />
+            <span>
+              <strong class="text-slate-900">${item.patientName}</strong>
+              <span class="text-slate-500">(${item.count} sessão(ões) • Venc. ${item.ddmm})</span>
+            </span>
+          </span>
+          <span class="font-bold text-emerald-700 whitespace-nowrap">${fmtBRL(item.totalVal)}</span>
+        </label>
+      `).join('');
+    }
+
+    function sendSelectedGeneratedChargesWhatsApp() {
+      const checked = Array.from(document.querySelectorAll('.gen-charge-checkbox:checked'));
+      if (!checked.length) {
+        return showToast('Selecione ao menos um cliente para enviar a cobrança.');
+      }
+
+      let sent = 0;
+      for (const box of checked) {
+        const phone = (box.dataset.phone || '').replace(/\D/g, '');
+        if (!phone) continue;
+        const fullPhone = phone.length <= 11 ? '55' + phone : phone;
+        const msg = decodeURIComponent(box.dataset.msg || '');
+        window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        sent++;
+      }
+
+      if (!sent) {
+        showToast('Nenhum dos clientes selecionados possui telefone cadastrado.');
+      }
+    }
+
+    function renderWaitlistDashboard() {
+      const container = document.getElementById('dash-waitlist');
+      if (!container) return;
+
+      const waitlist = state.patients
+        .filter(p => p.status === 'lista_de_espera')
+        .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+
+      if (!waitlist.length) {
+        container.innerHTML = '<p class="py-2 text-slate-400 text-xs">Nenhum paciente em lista de espera.</p>';
+        return;
+      }
+
+      container.innerHTML = waitlist.map(p => {
+        const regDate = p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '—';
+        return `
+          <div onclick="openPatientDetail('${p.id}'); switchTab('pacientes');" class="py-2.5 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 px-1 rounded-lg">
+            <span class="font-semibold text-slate-900">${p.nome_completo}</span>
+            <span class="text-xs text-slate-500 whitespace-nowrap">Cadastro: ${regDate}</span>
+          </div>
+        `;
+      }).join('');
     }
 
     // PACIENTES & MEDICAMENTOS
@@ -1553,7 +1746,7 @@
               <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${p.cor_agenda || '#a21caf'}"></span>
               <h3 class="font-bold text-slate-900 truncate">${p.nome_completo}</h3>
             </div>
-            <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${p.status}</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${p.status === 'lista_de_espera' ? 'lista de espera' : p.status}</span>
           </div>
           <p class="text-xs text-slate-500">
             ${p.telefone || 'Sem telefone'} • ${fmtBRL(p.valor_sessao)}
@@ -1600,7 +1793,7 @@
       }
 
       document.getElementById('detail-name').textContent = p.nome_completo;
-      document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Gênero: ${p.genero || '—'} • Status: ${p.status}`;
+      document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Gênero: ${p.genero || '—'} • Status: ${p.status === 'lista_de_espera' ? 'lista de espera' : p.status}`;
       document.getElementById('detail-phone').textContent = p.telefone || '—';
       document.getElementById('detail-email').textContent = p.email || '—';
       document.getElementById('detail-work-edu').textContent = [p.escolaridade, p.profissao].filter(Boolean).join(' • ') || '—';
