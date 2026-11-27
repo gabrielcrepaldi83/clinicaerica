@@ -52,6 +52,105 @@
     </div>
   </div>
 
+  <!-- TELA PÚBLICA DE AUTO-CADASTRO DO PACIENTE -->
+  <div id="public-register-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-fuchsia-900 via-slate-900 to-slate-800">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-100 space-y-5 max-h-[95vh] overflow-y-auto">
+      <div class="text-center border-b border-slate-100 pb-4">
+        <span class="text-xs font-bold uppercase tracking-widest text-fuchsia-700">Ficha Inicial</span>
+        <h1 class="text-2xl font-bold text-slate-900 mt-1">Cadastro do Paciente — Anotaí Psi</h1>
+        <p class="text-sm text-slate-500 mt-1">Preencha seus dados para envio à psicóloga antes da sessão.</p>
+      </div>
+
+      <form id="public-patient-form" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo *</label>
+            <input id="pub-nome" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF</label>
+            <input id="pub-cpf" type="text" oninput="maskCPF(this)" maxlength="14" placeholder="000.000.000-00" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp *</label>
+            <input id="pub-tel" type="text" required oninput="maskPhone(this)" maxlength="15" placeholder="(16) 99999 9999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
+            <input id="pub-email" type="email" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Nascimento</label>
+            <input id="pub-nasc" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Gênero</label>
+            <select id="pub-genero" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="">Selecione...</option>
+              <option value="Mulher cisgênero">Mulher cisgênero</option>
+              <option value="Homem cisgênero">Homem cisgênero</option>
+              <option value="Mulher transgênero">Mulher transgênero</option>
+              <option value="Homem transgênero">Homem transgênero</option>
+              <option value="Não-binário">Não-binário</option>
+              <option value="Agênero">Agênero</option>
+              <option value="Gênero fluido">Gênero fluido</option>
+              <option value="Bigênero">Bigênero</option>
+              <option value="Pangênero">Pangênero</option>
+              <option value="Two-Spirit">Two-Spirit</option>
+              <option value="Questionando-se / Em dúvida">Questionando-se / Em dúvida</option>
+              <option value="Outro">Outro</option>
+              <option value="Prefiro não informar">Prefiro não informar</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Escolaridade</label>
+            <input id="pub-escol" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Profissão</label>
+            <input id="pub-prof" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Endereço / CEP</label>
+            <input id="pub-end" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Contato de Emergência</label>
+            <input id="pub-emerg" type="text" oninput="maskPhoneIfDigits(this)" maxlength="40" placeholder="Nome e telefone" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Responsável (se menor/dependente)</label>
+            <input id="pub-resp-nome" type="text" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">CPF do Responsável</label>
+            <input id="pub-resp-cpf" type="text" oninput="maskCPF(this)" maxlength="14" placeholder="000.000.000-00" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone Responsável</label>
+            <input id="pub-resp-tel" type="text" oninput="maskPhone(this)" maxlength="15" placeholder="(16) 99999 9999" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo da procura / Queixa principal</label>
+          <textarea id="pub-demanda" rows="3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <p id="pub-feedback" class="text-xs font-medium hidden"></p>
+        <button type="submit" class="w-full py-3 px-4 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white font-semibold text-sm transition cursor-pointer">
+          Enviar Cadastro
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- TELA DE LOGIN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-fuchsia-900 via-slate-900 to-slate-800">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
@@ -220,7 +319,12 @@
             <h1 class="text-2xl font-bold text-slate-900">Pacientes</h1>
             <p class="text-sm text-slate-500">Cadastro, medicações, pacotes, anexos privados e histórico clínico.</p>
           </div>
-          <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="copyPatientRegistrationLink()" class="px-4 py-2 rounded-xl bg-white border border-fuchsia-300 hover:bg-fuchsia-50 text-fuchsia-800 text-sm font-semibold cursor-pointer">
+              Copiar Link de Cadastro
+            </button>
+            <button onclick="openPatientModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Paciente</button>
+          </div>
         </div>
 
         <div class="bg-white p-4 rounded-2xl border border-slate-200">
@@ -573,6 +677,25 @@
             <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Nascimento</label>
             <input id="pat-nasc" type="date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Gênero</label>
+            <select id="pat-genero" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+              <option value="">Selecione...</option>
+              <option value="Mulher cisgênero">Mulher cisgênero</option>
+              <option value="Homem cisgênero">Homem cisgênero</option>
+              <option value="Mulher transgênero">Mulher transgênero</option>
+              <option value="Homem transgênero">Homem transgênero</option>
+              <option value="Não-binário">Não-binário</option>
+              <option value="Agênero">Agênero</option>
+              <option value="Gênero fluido">Gênero fluido</option>
+              <option value="Bigênero">Bigênero</option>
+              <option value="Pangênero">Pangênero</option>
+              <option value="Two-Spirit">Two-Spirit</option>
+              <option value="Questionando-se / Em dúvida">Questionando-se / Em dúvida</option>
+              <option value="Outro">Outro</option>
+              <option value="Prefiro não informar">Prefiro não informar</option>
+            </select>
+          </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
@@ -645,23 +768,19 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Cor na Agenda</label>
-            <select id="pat-cor" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
-              <option value="#a21caf">Magenta</option>
-              <option value="#0284c7">Azul Royal</option>
-              <option value="#0d9488">Azul Petróleo / Verde-Água</option>
-              <option value="#16a34a">Verde Esmeralda</option>
-              <option value="#ea580c">Laranja</option>
-              <option value="#d97706">Âmbar / Mostarda</option>
-              <option value="#e11d48">Rosa / Coral</option>
-              <option value="#7c3aed">Roxo / Violeta</option>
-              <option value="#4f46e5">Índigo</option>
-              <option value="#475569">Cinza Ardósia</option>
-            </select>
-          </div>
-          <div class="col-span-2 sm:col-span-5">
             <label class="block text-xs font-semibold text-slate-600 mb-1">Emergência</label>
             <input id="pat-emerg" type="text" oninput="maskPhoneIfDigits(this)" maxlength="40" placeholder="(16) 99999-9999" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div class="col-span-2 sm:col-span-5 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <label class="block text-xs font-semibold text-slate-600">Cor na Agenda (clique na cor desejada)</label>
+              <div class="flex items-center gap-2 text-xs text-slate-600">
+                <span>Selecionada:</span>
+                <span id="pat-cor-preview" class="inline-block w-5 h-5 rounded-full border border-slate-300 shadow-inner" style="background-color: #a21caf;"></span>
+              </div>
+            </div>
+            <input type="hidden" id="pat-cor" value="#a21caf" />
+            <div id="pat-cor-swatches" class="grid grid-cols-10 sm:grid-cols-12 gap-1.5 pt-1"></div>
           </div>
         </div>
         <div id="pat-package-fields" class="hidden grid grid-cols-2 gap-3 bg-fuchsia-50 p-3 rounded-xl border border-fuchsia-100">
@@ -967,6 +1086,47 @@
     };
 
 
+
+    // MOSTRUÁRIO DE 60 CORES PARA SELEÇÃO DO PACIENTE
+    const PATIENT_COLOR_PALETTE = [
+      '#a21caf', '#c026d3', '#d946ef', '#e879f9', '#86198f',
+      '#be185d', '#db2777', '#ec4899', '#f43f5e', '#e11d48',
+      '#dc2626', '#ef4444', '#b91c1c', '#ea580c', '#f97316',
+      '#c2410c', '#d97706', '#f59e0b', '#eab308', '#ca8a04',
+      '#65a30d', '#84cc16', '#4d7c0f', '#16a34a', '#22c55e',
+      '#15803d', '#059669', '#10b981', '#047857', '#0d9488',
+      '#14b8a6', '#0f766e', '#0891b2', '#06b6d4', '#0e7490',
+      '#0284c7', '#0ea5e9', '#0369a1', '#2563eb', '#3b82f6',
+      '#1d4ed8', '#4f46e5', '#6366f1', '#4338ca', '#7c3aed',
+      '#8b5cf6', '#6d28d9', '#9333ea', '#7e22ce', '#581c87',
+      '#78350f', '#92400e', '#a16207', '#3f6212', '#115e59',
+      '#1e3a8a', '#312e81', '#475569', '#334155', '#64748b'
+    ];
+
+    function renderPatientColorSwatches(selectedHex = '#a21caf') {
+      const normalized = (selectedHex || '#a21caf').toLowerCase();
+      const inputEl = document.getElementById('pat-cor');
+      const prevEl = document.getElementById('pat-cor-preview');
+      const container = document.getElementById('pat-cor-swatches');
+      if (inputEl) inputEl.value = normalized;
+      if (prevEl) prevEl.style.backgroundColor = normalized;
+      if (!container) return;
+
+      container.innerHTML = PATIENT_COLOR_PALETTE.map(hex => {
+        const isSelected = hex.toLowerCase() === normalized;
+        return `
+          <button type="button" onclick="selectPatientColor('${hex}')" title="${hex}"
+            style="background-color: ${hex};"
+            class="w-6 h-6 rounded-full cursor-pointer transition-transform hover:scale-110 focus:outline-none ${isSelected ? 'ring-2 ring-offset-2 ring-slate-900 scale-110' : 'border border-black/10'}">
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectPatientColor(hex) {
+      renderPatientColorSwatches(hex);
+    }
+
     const CHARGED_SESSION_STATUSES = ['paciente_presente', 'falta_nao_justificada', 'cancelamento_cobrado', 'realizada', 'falta_cobrada'];
     const SESSION_STATUS_LABELS = {
       agendada: 'Agendada',
@@ -1101,6 +1261,12 @@
     }
 
     sb.auth.onAuthStateChange(async (_event, session) => {
+      if (isPublicRegistrationMode()) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('public-register-screen').classList.remove('hidden');
+        return;
+      }
       if (session?.user) {
         currentUser = session.user;
         document.getElementById('login-screen').classList.add('hidden');
@@ -1287,7 +1453,8 @@
     function openPatientModal(patient = null) {
       document.getElementById('patient-form').reset();
       document.getElementById('pat-dia-venc').value = '';
-      document.getElementById('pat-cor').value = '#a21caf';
+      document.getElementById('pat-genero').value = '';
+      renderPatientColorSwatches('#a21caf');
       document.getElementById('pat-id').value = patient?.id || '';
       document.getElementById('patient-modal-title').textContent = patient ? 'Editar Paciente' : 'Novo Paciente';
       if (patient) {
@@ -1296,6 +1463,7 @@
         document.getElementById('pat-tel').value = formatPhoneValue(patient.telefone || '');
         document.getElementById('pat-email').value = patient.email || '';
         document.getElementById('pat-nasc').value = patient.data_nascimento || '';
+        document.getElementById('pat-genero').value = patient.genero || '';
         document.getElementById('pat-escol').value = patient.escolaridade || '';
         document.getElementById('pat-prof').value = patient.profissao || '';
         document.getElementById('pat-origem').value = patient.origem_conhecimento || '';
@@ -1308,7 +1476,7 @@
         document.getElementById('pat-cobranca').value = patient.modelo_cobranca || 'por_sessao';
         document.getElementById('pat-dia-venc').value = patient.dia_vencimento || '';
         document.getElementById('pat-status').value = patient.status || 'ativo';
-        document.getElementById('pat-cor').value = patient.cor_agenda || '#a21caf';
+        renderPatientColorSwatches(patient.cor_agenda || '#a21caf');
         document.getElementById('pat-emerg').value = patient.contato_emergencia || '';
         document.getElementById('pat-pkg-total').value = patient.sessoes_pacote_total || 4;
         document.getElementById('pat-pkg-usadas').value = patient.sessoes_pacote_usadas || 0;
@@ -1331,6 +1499,7 @@
         telefone: document.getElementById('pat-tel').value.trim() || null,
         email: document.getElementById('pat-email').value.trim() || null,
         data_nascimento: document.getElementById('pat-nasc').value || null,
+        genero: document.getElementById('pat-genero').value || null,
         escolaridade: document.getElementById('pat-escol').value.trim() || null,
         profissao: document.getElementById('pat-prof').value.trim() || null,
         origem_conhecimento: document.getElementById('pat-origem').value.trim() || null,
@@ -1431,7 +1600,7 @@
       }
 
       document.getElementById('detail-name').textContent = p.nome_completo;
-      document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Status: ${p.status}`;
+      document.getElementById('detail-meta').textContent = `CPF: ${p.cpf || '—'} • Nascimento: ${fmtDate(p.data_nascimento)} • Gênero: ${p.genero || '—'} • Status: ${p.status}`;
       document.getElementById('detail-phone').textContent = p.telefone || '—';
       document.getElementById('detail-email').textContent = p.email || '—';
       document.getElementById('detail-work-edu').textContent = [p.escolaridade, p.profissao].filter(Boolean).join(' • ') || '—';
@@ -2534,6 +2703,79 @@
       if (!msg) return showToast('Mensagem vazia.');
       window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
+
+    // LINK E TELA PÚBLICA DE CADASTRO DO PACIENTE
+    function getPatientRegistrationUrl() {
+      const base = window.location.href.split('?')[0].split('#')[0];
+      const uid = currentUser?.id ? `&prof=${encodeURIComponent(currentUser.id)}` : '';
+      return `${base}?cadastro=1${uid}`;
+    }
+
+    async function copyPatientRegistrationLink() {
+      const link = getPatientRegistrationUrl();
+      try {
+        await navigator.clipboard.writeText(link);
+        showToast('Link de cadastro copiado para enviar ao paciente!');
+      } catch (_e) {
+        prompt('Copie o link de cadastro para enviar ao paciente:', link);
+      }
+    }
+
+    function isPublicRegistrationMode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('cadastro') === '1';
+    }
+
+    if (isPublicRegistrationMode()) {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('public-register-screen').classList.remove('hidden');
+      });
+    }
+
+    document.getElementById('public-patient-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fb = document.getElementById('pub-feedback');
+      fb.classList.remove('hidden', 'text-red-600', 'text-emerald-700');
+
+      const params = new URLSearchParams(window.location.search);
+      const profId = params.get('prof') || currentUser?.id || null;
+
+      const payload = {
+        nome_completo: document.getElementById('pub-nome').value.trim(),
+        cpf: document.getElementById('pub-cpf').value.trim() || null,
+        telefone: document.getElementById('pub-tel').value.trim() || null,
+        email: document.getElementById('pub-email').value.trim() || null,
+        data_nascimento: document.getElementById('pub-nasc').value || null,
+        genero: document.getElementById('pub-genero').value || null,
+        escolaridade: document.getElementById('pub-escol').value.trim() || null,
+        profissao: document.getElementById('pub-prof').value.trim() || null,
+        endereco_cep: document.getElementById('pub-end').value.trim() || null,
+        contato_emergencia: document.getElementById('pub-emerg').value.trim() || null,
+        responsavel_nome: document.getElementById('pub-resp-nome').value.trim() || null,
+        responsavel_cpf: document.getElementById('pub-resp-cpf').value.trim() || null,
+        responsavel_telefone: document.getElementById('pub-resp-tel').value.trim() || null,
+        demanda_queixa: document.getElementById('pub-demanda').value.trim() || null,
+        origem_conhecimento: 'Link de auto-cadastro',
+        status: 'ativo',
+        modelo_cobranca: 'por_sessao',
+        valor_sessao: 0
+      };
+      if (profId) payload.user_id = profId;
+
+      const { error } = await sb.from('pacientes').insert(payload);
+      if (error) {
+        fb.textContent = 'Não foi possível enviar o cadastro agora. Verifique se o formulário de auto-cadastro está habilitado no banco.';
+        fb.classList.add('text-red-600');
+        return;
+      }
+
+      document.getElementById('public-patient-form').reset();
+      fb.textContent = 'Cadastro enviado com sucesso! Obrigado.';
+      fb.classList.add('text-emerald-700');
+    });
+
   </script>
 </body>
 </html>
