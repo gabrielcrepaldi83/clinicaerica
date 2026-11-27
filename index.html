@@ -305,6 +305,7 @@
               <button onclick="setAgendaView('semana')" id="btn-view-semana" class="px-3 py-1.5 rounded-lg bg-fuchsia-700 text-white cursor-pointer">Grade Semanal</button>
               <button onclick="setAgendaView('lista')" id="btn-view-lista" class="px-3 py-1.5 rounded-lg text-slate-600 cursor-pointer">Lista Completa</button>
             </div>
+            <button onclick="openPersonalEventModal()" class="px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">+ Compromisso Pessoal</button>
             <button onclick="openSessionModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Agendar Sessão</button>
           </div>
         </div>
@@ -891,6 +892,41 @@
     </div>
   </div>
 
+  <!-- MODAL: COMPROMISSO PESSOAL -->
+  <div id="personal-event-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Compromisso Pessoal</h3>
+      <form id="personal-event-form" class="space-y-3">
+        <input type="hidden" id="per-id" />
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Título do Compromisso *</label>
+          <input id="per-titulo" type="text" required placeholder="Ex: Médico, academia, reunião..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Data e Hora *</label>
+            <input id="per-datahora" type="datetime-local" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Duração (min)</label>
+            <input id="per-duracao" type="number" min="15" max="480" step="15" value="60" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações</label>
+          <textarea id="per-obs" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+        </div>
+        <div class="flex items-center justify-between pt-2">
+          <button type="button" id="per-delete-btn" onclick="deletePersonalEvent()" class="hidden px-3 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 cursor-pointer">Excluir</button>
+          <div class="flex gap-2 ml-auto">
+            <button type="button" onclick="closeModal('personal-event-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-sm cursor-pointer">Cancelar</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-fuchsia-700 text-white text-sm font-semibold cursor-pointer">Salvar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: SESSÃO & RECORRÊNCIA + IMPORTAÇÃO DE TEXTO/IA -->
   <div id="session-modal" class="no-print fixed inset-0 z-40 hidden bg-slate-900/50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -914,7 +950,7 @@
             </select>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Status / Presença</label>
             <select id="ses-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold">
@@ -926,6 +962,10 @@
               <option value="cancelamento_nao_cobrado" class="text-red-600 font-semibold">Cancelamento não cobrado</option>
               <option value="cancelado_profissional" class="text-red-600 font-semibold">Cancelado pelo profissional</option>
             </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Duração (min)</label>
+            <input id="ses-duracao" type="number" min="15" max="360" step="15" value="50" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">Valor da Sessão (R$)</label>
@@ -1475,13 +1515,6 @@
       renderWaitlistDashboard();
     }
 
-    function getLastDayOfPreviousMonthISO() {
-      const now = new Date();
-      const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastOfPrevMonth = new Date(firstOfCurrentMonth.getTime() - 1);
-      return lastOfPrevMonth.toISOString().slice(0, 10);
-    }
-
     function getDueDateInfoForPatient(patient) {
       const now = new Date();
       const targetDay = Number(patient?.dia_vencimento || 0);
@@ -1512,8 +1545,16 @@
       return { isWithin5Days: false, ddmm: `${dd}/${mm}`, dueDateObj: fallback };
     }
 
-    function getUnpaidSessionsUpToPrevMonthEnd(patientId) {
-      const cutoffISO = getLastDayOfPreviousMonthISO();
+    function getTargetBillingMonthYM(dueDateObj) {
+      if (!dueDateObj) return '';
+      const prevMonthDate = new Date(dueDateObj.getFullYear(), dueDateObj.getMonth() - 1, 1);
+      const y = prevMonthDate.getFullYear();
+      const m = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    function getUnpaidSessionsForBillingMonth(patientId, targetYM) {
+      if (!targetYM) return [];
       const paidSessionIds = new Set(
         state.finance
           .filter(f => f.paciente_id === patientId && f.status === 'pago' && f.sessao_id)
@@ -1530,8 +1571,8 @@
         .filter(s => {
           if (s.paciente_id !== patientId) return false;
           const dateISO = (s.data_hora || '').slice(0, 10);
-          if (!dateISO || dateISO > cutoffISO) return false;
-          if (['agendada', 'falta_justificada', 'cancelamento_nao_cobrado', 'cancelado_profissional', 'cancelada'].includes(s.status)) return false;
+          if (!dateISO || !dateISO.startsWith(targetYM)) return false;
+          if (!isChargedSessionStatus(s.status)) return false;
           if (paidSessionIds.has(s.id)) return false;
           const val = Number(s.valor_sessao || 0).toFixed(2);
           if (paidByDescOrDate.has(`${dateISO}|${val}`)) return false;
@@ -1550,7 +1591,8 @@
         const dueInfo = getDueDateInfoForPatient(p);
         if (!dueInfo.isWithin5Days) continue;
 
-        const unpaidPrev = getUnpaidSessionsUpToPrevMonthEnd(p.id);
+        const targetYM = getTargetBillingMonthYM(dueInfo.dueDateObj);
+        const unpaidPrev = getUnpaidSessionsForBillingMonth(p.id, targetYM);
         if (!unpaidPrev.length) continue;
 
         const totalVal = unpaidPrev.reduce((acc, s) => acc + Number(s.valor_sessao || p.valor_sessao || 0), 0);
@@ -2165,6 +2207,72 @@
       renderWeeklyAgenda();
     }
 
+    const PERSONAL_EVENTS_KEY = 'anota_psi_personal_events';
+
+    function getPersonalEvents() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PERSONAL_EVENTS_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_e) {
+        return [];
+      }
+    }
+
+    function savePersonalEvents(list) {
+      try {
+        localStorage.setItem(PERSONAL_EVENTS_KEY, JSON.stringify(list));
+      } catch (_e) {}
+    }
+
+    function openPersonalEventModal(eventId = null) {
+      document.getElementById('personal-event-form').reset();
+      const ev = eventId ? getPersonalEvents().find(item => item.id === eventId) : null;
+      document.getElementById('per-id').value = ev?.id || '';
+      document.getElementById('per-titulo').value = ev?.titulo || '';
+      document.getElementById('per-datahora').value = ev?.data_hora
+        ? new Date(ev.data_hora).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16);
+      document.getElementById('per-duracao').value = ev?.duracao_minutos || 60;
+      document.getElementById('per-obs').value = ev?.observacoes || '';
+      document.getElementById('per-delete-btn').classList.toggle('hidden', !ev);
+      openModal('personal-event-modal');
+    }
+
+    document.getElementById('personal-event-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('per-id').value;
+      const titulo = document.getElementById('per-titulo').value.trim();
+      const dtInput = document.getElementById('per-datahora').value;
+      const duracao = Math.max(15, Number(document.getElementById('per-duracao').value || 60));
+      const obs = document.getElementById('per-obs').value.trim();
+      if (!titulo || !dtInput) return;
+
+      const list = getPersonalEvents();
+      const item = {
+        id: id || ('per_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+        titulo,
+        data_hora: new Date(dtInput).toISOString(),
+        duracao_minutos: duracao,
+        observacoes: obs
+      };
+
+      const nextList = id ? list.map(x => x.id === id ? item : x) : [...list, item];
+      savePersonalEvents(nextList);
+      closeModal('personal-event-modal');
+      showToast('Compromisso pessoal salvo!');
+      renderWeeklyAgenda();
+    });
+
+    function deletePersonalEvent() {
+      const id = document.getElementById('per-id').value;
+      if (!id) return;
+      const nextList = getPersonalEvents().filter(x => x.id !== id);
+      savePersonalEvents(nextList);
+      closeModal('personal-event-modal');
+      showToast('Compromisso pessoal removido.');
+      renderWeeklyAgenda();
+    }
+
     function renderWeeklyAgenda() {
       const today = new Date();
       today.setDate(today.getDate() + weekOffsetDays);
@@ -2182,26 +2290,100 @@
       document.getElementById('week-range-label').textContent =
         `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${days[5].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 
+      const startHour = 7;
+      const endHour = 21;
+      const hourHeight = 56; // 56px por hora completa
+      const totalHours = endHour - startHour;
+      const personalEvents = getPersonalEvents();
+
       const grid = document.getElementById('weekly-grid');
       grid.innerHTML = days.map(d => {
         const iso = d.toISOString().slice(0, 10);
-        const daySessions = state.sessions
+
+        const sessionItems = state.sessions
           .filter(s => s.data_hora?.slice(0, 10) === iso)
-          .sort((a, b) => a.data_hora.localeCompare(b.data_hora));
+          .map(s => {
+            const dt = new Date(s.data_hora);
+            const minsFromStart = ((dt.getHours() - startHour) * 60) + dt.getMinutes();
+            const dur = Number(s.duracao_minutos || 50);
+            const pat = getPatient(s.paciente_id);
+            const cor = pat?.cor_agenda || '#a21caf';
+            return {
+              kind: 'session',
+              id: s.id,
+              startMin: minsFromStart,
+              durationMin: dur,
+              title: `${fmtTime(s.data_hora)} • ${getPatientName(s.paciente_id).split(' ')[0]}`,
+              subtitle: getSessionStatusLabel(s.status),
+              color: cor,
+              onClick: `openSessionModal('${s.id}')`
+            };
+          });
+
+        const personalItems = personalEvents
+          .filter(ev => ev.data_hora?.slice(0, 10) === iso)
+          .map(ev => {
+            const dt = new Date(ev.data_hora);
+            const minsFromStart = ((dt.getHours() - startHour) * 60) + dt.getMinutes();
+            const dur = Number(ev.duracao_minutos || 60);
+            return {
+              kind: 'personal',
+              id: ev.id,
+              startMin: minsFromStart,
+              durationMin: dur,
+              title: `${fmtTime(ev.data_hora)} • ${ev.titulo}`,
+              subtitle: 'Pessoal',
+              color: '#0f172a',
+              onClick: `openPersonalEventModal('${ev.id}')`
+            };
+          });
+
+        const dayEvents = [...sessionItems, ...personalItems].sort((a, b) => a.startMin - b.startMin);
+
+        // Calcular sobreposição visível lado a lado quando houver conflito no mesmo horário
+        const positioned = dayEvents.map((ev, idx) => {
+          const overlaps = dayEvents.filter(other => {
+            const aStart = ev.startMin;
+            const aEnd = ev.startMin + ev.durationMin;
+            const bStart = other.startMin;
+            const bEnd = other.startMin + other.durationMin;
+            return aStart < bEnd && bStart < aEnd;
+          });
+          const overlapIndex = overlaps.findIndex(x => x.id === ev.id);
+          const overlapCount = Math.max(1, overlaps.length);
+          const topPx = Math.max(0, (ev.startMin / 60) * hourHeight);
+          const heightPx = Math.max(22, (ev.durationMin / 60) * hourHeight);
+          const widthPct = 100 / overlapCount;
+          const leftPct = overlapIndex * widthPct;
+          return { ...ev, topPx, heightPx, widthPct, leftPct, overlapCount };
+        });
+
+        const hourRows = [];
+        for (let h = startHour; h < endHour; h++) {
+          const label = String(h).padStart(2, '0') + ':00';
+          hourRows.push(`
+            <div style="height: ${hourHeight}px;" class="border-t border-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 select-none">
+              ${label}
+            </div>
+          `);
+        }
 
         return `
-          <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-col min-h-[220px]">
-            <div class="border-b border-slate-100 pb-2 mb-2">
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-3 py-2">
               <div class="text-xs font-bold uppercase text-fuchsia-700">${d.toLocaleDateString('pt-BR', { weekday: 'short' })}</div>
               <div class="text-sm font-bold text-slate-800">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
             </div>
-            <div class="space-y-2 flex-1">
-              ${daySessions.length ? daySessions.map(s => `
-                <div onclick="openSessionModal('${s.id}')" style="border-left: 4px solid ${getPatient(s.paciente_id)?.cor_agenda || '#a21caf'}; background-color: ${(getPatient(s.paciente_id)?.cor_agenda || '#a21caf')}14;" class="p-2 rounded-xl border border-slate-200 hover:border-fuchsia-500 cursor-pointer text-xs">
-                  <div class="font-bold text-slate-900">${fmtTime(s.data_hora)} • ${getPatientName(s.paciente_id).split(' ')[0]}</div>
-                  <div class="text-slate-600 mt-0.5">${getSessionStatusLabel(s.status)}</div>
+            <div style="height: ${totalHours * hourHeight}px;" class="relative">
+              <div>${hourRows.join('')}</div>
+              ${positioned.map(item => `
+                <div onclick="${item.onClick}"
+                  style="top: ${item.topPx}px; height: ${item.heightPx}px; left: calc(${item.leftPct}% + 2px); width: calc(${item.widthPct}% - 4px); border-left: 3px solid ${item.color}; background-color: ${item.kind === 'personal' ? '#e2e8f0e6' : item.color + '24'}; z-index: ${10 + (item.overlapCount > 1 ? 5 : 0)};"
+                  class="absolute rounded-lg border border-black/10 px-1.5 py-1 overflow-hidden cursor-pointer hover:ring-1 hover:ring-fuchsia-500 text-[11px] leading-tight">
+                  <div class="font-bold text-slate-900 truncate">${item.title}</div>
+                  <div class="text-[10px] text-slate-600 truncate">${item.subtitle} (${item.durationMin}m)</div>
                 </div>
-              `).join('') : '<p class="text-xs text-slate-300 pt-2">Livre</p>'}
+              `).join('')}
             </div>
           </div>
         `;
@@ -2228,6 +2410,7 @@
       document.getElementById('ses-paciente').value = s?.paciente_id || '';
       document.getElementById('ses-datahora').value = s?.data_hora ? new Date(s.data_hora).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
       document.getElementById('ses-modalidade').value = s?.modalidade || 'presencial';
+      document.getElementById('ses-duracao').value = s?.duracao_minutos || 50;
       const stEl = document.getElementById('ses-status');
       stEl.value = s ? (s.status || 'agendada') : 'agendada';
       applySessionStatusSelectStyle(stEl);
@@ -2250,6 +2433,7 @@
       const paciente = getPatient(pacienteId);
 
       if (id) {
+        const duracaoMin = Math.max(15, Number(document.getElementById('ses-duracao')?.value || 50));
         const payload = {
           paciente_id: pacienteId,
           data_hora: baseDate.toISOString(),
@@ -2260,6 +2444,10 @@
           prontuario_finalizado: document.getElementById('ses-finalizado').checked
         };
         const { error } = await sb.from('sessoes').update(payload).eq('id', id);
+        if (!error) {
+          const idx = state.sessions.findIndex(x => x.id === id);
+          if (idx >= 0) state.sessions[idx] = { ...state.sessions[idx], duracao_minutos: duracaoMin };
+        }
         if (error) return showToast('Erro ao atualizar sessão.');
 
         const becameCharged = isChargedSessionStatus(status) &&
@@ -2290,6 +2478,7 @@
         for (let i = 0; i < count; i++) {
           const dt = new Date(baseDate);
           if (repeatStep !== 'none') dt.setDate(dt.getDate() + (i * Number(repeatStep)));
+          const duracaoMin = Math.max(15, Number(document.getElementById('ses-duracao')?.value || 50));
           rows.push({
             user_id: currentUser.id,
             paciente_id: pacienteId,
@@ -2303,6 +2492,10 @@
         }
 
         const { data: inserted, error } = await sb.from('sessoes').insert(rows).select();
+        if (!error && inserted?.length) {
+          const dVal = Math.max(15, Number(document.getElementById('ses-duracao')?.value || 50));
+          inserted.forEach(row => { row.duracao_minutos = dVal; });
+        }
         if (error) return showToast('Erro ao agendar sessões.');
 
         const first = inserted?.[0];
