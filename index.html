@@ -3193,8 +3193,10 @@
         }
         if (error) return showToast('Erro ao atualizar sessão.');
 
-        const becameCharged = isChargedSessionStatus(status) &&
-          (!oldSession || !isChargedSessionStatus(oldSession.status));
+        const wasCharged = Boolean(oldSession && isChargedSessionStatus(oldSession.status));
+        const nowCharged = isChargedSessionStatus(status);
+        const becameCharged = nowCharged && !wasCharged;
+        const becameUncharged = wasCharged && !nowCharged;
 
         if (becameCharged) {
           if (paciente?.modelo_cobranca === 'pacote_mensal') {
@@ -3212,6 +3214,23 @@
               data_vencimento: computeNextMonthDueDateISO(sesISO, paciente?.dia_vencimento),
               status: 'pendente'
             });
+          }
+        } else if (becameUncharged) {
+          if (paciente?.modelo_cobranca === 'pacote_mensal') {
+            await sb.from('pacientes')
+              .update({ sessoes_pacote_usadas: Math.max(0, (paciente.sessoes_pacote_usadas || 0) - 1) })
+              .eq('id', pacienteId);
+          } else {
+            const oldDateISO = oldSession ? getLocalDateISOFromTimestamp(oldSession.data_hora) : '';
+            const matchingPending = state.finance.filter(f => {
+              if (f.status === 'pago') return false;
+              if (f.sessao_id === id) return true;
+              const descDate = extractDateISOFromDescription(f.descricao);
+              return !f.sessao_id && f.paciente_id === pacienteId && oldDateISO && descDate === oldDateISO;
+            });
+            for (const item of matchingPending) {
+              await sb.from('financeiro').delete().eq('id', item.id);
+            }
           }
         }
       } else {
@@ -3731,12 +3750,28 @@
       } else if (filterBar) {
         filterBar.classList.add('hidden');
       }
+      const sortedList = [...list].sort((a, b) => {
+        const nameA = getPatientName(a.paciente_id);
+        const nameB = getPatientName(b.paciente_id);
+        const nameCmp = nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+        if (nameCmp !== 0) return nameCmp;
+
+        const sesA = resolveSessionForFinanceItem(a);
+        const sesB = resolveSessionForFinanceItem(b);
+        const dateA = (sesA ? getLocalDateISOFromTimestamp(sesA.data_hora) : extractDateISOFromDescription(a.descricao)) || a.data_vencimento || '';
+        const dateB = (sesB ? getLocalDateISOFromTimestamp(sesB.data_hora) : extractDateISOFromDescription(b.descricao)) || b.data_vencimento || '';
+        const dateCmp = dateA.localeCompare(dateB);
+        if (dateCmp !== 0) return dateCmp;
+
+        return (a.data_vencimento || '').localeCompare(b.data_vencimento || '');
+      });
+
       const tbody = document.getElementById('finance-tbody');
-      if (!list.length) {
+      if (!sortedList.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento encontrado.</td></tr>';
         return;
       }
-      tbody.innerHTML = list.map(f => {
+      tbody.innerHTML = sortedList.map(f => {
         const isVencido = isFinanceItemOverdue(f, todayISO);
         return `
         <tr>
