@@ -3593,15 +3593,6 @@
     function renderFinance() {
       const { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod } = getFinancePeriodContext();
 
-      // Helper para identificar se o lançamento pertence ao período atual (sessões do mês anterior ou vencimento no mês ativo)
-      const isItemInCurrentPeriod = (f) => {
-        if (!selectedYM) return true;
-        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
-        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
-        if (sesYM) return sesYM === sessionsMonthYM;
-        return (f.data_vencimento || '').startsWith(activeYM);
-      };
-
       // 1) Receitas pagas apenas do período + quadro separado de Recebimentos de outros períodos
       const paidItems = state.finance.filter(f => f.status === 'pago');
       const paidCurrentPeriod = paidItems.filter(f => isItemInCurrentPeriod(f));
