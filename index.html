@@ -816,7 +816,7 @@
               <div>
                 <p class="text-xs font-semibold text-slate-600">Receitas pagas</p>
                 <p id="fin-sum-pagas" class="text-2xl font-bold text-emerald-700 mt-0.5">R$ 0,00</p>
-                <p id="fin-sum-pagas-obs" class="text-[11px] text-amber-800 font-medium mt-0.5 hidden"></p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Apenas recebimentos do período</p>
               </div>
             </div>
 
@@ -831,13 +831,20 @@
             </div>
           </div>
 
-          <!-- LINHA SECUNDÁRIA: RECEITAS VENCIDAS E RECEITAS VENCIDAS DE PERÍODOS ANTERIORES -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- LINHA SECUNDÁRIA: RECEITAS VENCIDAS, RECEBIMENTOS DE OUTROS PERÍODOS E RECEITAS VENCIDAS DE PERÍODOS ANTERIORES -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div id="fin-card-vencidas" onclick="toggleFinanceCardFilter('vencidas')" role="button" tabindex="0"
               class="fin-summary-card rounded-2xl border border-amber-300 bg-amber-50/60 p-4 cursor-pointer transition hover:border-amber-500">
               <p class="text-xs font-bold uppercase tracking-wider text-amber-900">Receitas vencidas</p>
               <p id="fin-sum-vencidas" class="text-xl font-bold text-amber-800 mt-1">R$ 0,00</p>
               <p class="text-[11px] text-amber-800/80 mt-0.5">Vencimento já passou no período e ainda não foram pagas</p>
+            </div>
+
+            <div id="fin-card-outros-periodos" onclick="toggleFinanceCardFilter('outros_periodos')" role="button" tabindex="0"
+              class="fin-summary-card rounded-2xl border border-teal-200 bg-teal-50/50 p-4 cursor-pointer transition hover:border-teal-400">
+              <p class="text-xs font-bold uppercase tracking-wider text-teal-900">Recebimentos de outros períodos</p>
+              <p id="fin-sum-outros-periodos" class="text-xl font-bold text-teal-800 mt-1">R$ 0,00</p>
+              <p class="text-[11px] text-teal-800/80 mt-0.5">Pagamentos recebidos fora do período atual (antecipados ou atrasados)</p>
             </div>
 
             <div id="fin-card-anteriores" onclick="toggleFinanceCardFilter('anteriores')" role="button" tabindex="0"
@@ -3431,9 +3438,10 @@
 
     const FINANCE_CARD_LABELS = {
       previsto: 'Total previsto (sessões cobráveis do mês anterior)',
-      pagas: 'Receitas pagas (todos os recebimentos no mês)',
+      pagas: 'Receitas pagas (apenas recebimentos do período)',
       avencer: 'Receitas à vencer',
       vencidas: 'Receitas vencidas',
+      outros_periodos: 'Recebimentos de outros períodos',
       anteriores: 'Receitas vencidas de períodos anteriores'
     };
 
@@ -3494,12 +3502,16 @@
       }
 
       if (activeFinanceCardFilter === 'pagas') {
+        return state.finance.filter(f => f.status === 'pago' && isItemInCurrentPeriod(f));
+      }
+
+      if (activeFinanceCardFilter === 'outros_periodos') {
         return state.finance.filter(f => {
-          if (f.status !== 'pago') return false;
-          if (!selectedYM) return true;
+          if (f.status !== 'pago' || isItemInCurrentPeriod(f)) return false;
+          if (!selectedYM) return false;
           const pagYM = (f.data_pagamento || '').slice(0, 7);
           const vencYM = (f.data_vencimento || '').slice(0, 7);
-          return pagYM === activeYM || (!pagYM && vencYM === activeYM) || isItemInCurrentPeriod(f);
+          return pagYM === activeYM || vencYM !== activeYM;
         });
       }
 
@@ -3545,7 +3557,7 @@
         prevSubEl.textContent = `Sessões de ${prevLabel} (${billedSessionsPrevMonth.length} cobrável(is))`;
       }
 
-      // 2) Receitas pagas referente ao período atual + observação se houver recebimento de outro período (atrasado ou antecipado)
+      // 2) Receitas pagas apenas do período + quadro separado de Recebimentos de outros períodos
       const paidItems = state.finance.filter(f => f.status === 'pago');
       const paidCurrentPeriod = paidItems.filter(f => isItemInCurrentPeriod(f));
       const otherPeriodPaid = paidItems.filter(f => {
@@ -3557,16 +3569,9 @@
 
       const receitasPagas = paidCurrentPeriod.reduce((acc, f) => acc + Number(f.valor || 0), 0);
       const otherPeriodPaidTotal = otherPeriodPaid.reduce((acc, f) => acc + Number(f.valor || 0), 0);
-
-      const obsEl = document.getElementById('fin-sum-pagas-obs');
-      if (obsEl) {
-        if (otherPeriodPaidTotal > 0) {
-          obsEl.textContent = `Obs: há ${fmtBRL(otherPeriodPaidTotal)} recebido(s) referente a outro período.`;
-          obsEl.classList.remove('hidden');
-        } else {
-          obsEl.textContent = '';
-          obsEl.classList.add('hidden');
-        }
+      const outrosPeriodosEl = document.getElementById('fin-sum-outros-periodos');
+      if (outrosPeriodosEl) {
+        outrosPeriodosEl.textContent = fmtBRL(otherPeriodPaidTotal);
       }
 
       // 3) Não pagos: à vencer, vencidas no período, e APENAS vencidas de períodos anteriores
