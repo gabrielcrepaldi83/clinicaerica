@@ -3625,7 +3625,7 @@
       const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      // 3) Total previsto: soma apenas das sessões do mês anterior com status que gera cobrança
+      // 3) Total previsto: apenas as sessões do mês anterior com status que gera cobrança
       const billedSessionsPrevMonth = state.sessions.filter(s => {
         const sDateISO = (s.data_hora || '').slice(0, 10);
         return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
