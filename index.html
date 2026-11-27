@@ -268,6 +268,18 @@
           </div>
         </div>
 
+        <!-- AVISO: SESSÕES DE DATAS ANTERIORES AINDA COMO AGENDADA -->
+        <div id="dash-overdue-scheduled-box" class="hidden bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-amber-950">Atenção: Sessões Passadas Ainda Marcadas como "Agendada"</h2>
+              <p class="text-xs text-amber-800">Atualize o status dessas sessões para definir presença, falta ou cancelamento (e gerar cobrança quando aplicável).</p>
+            </div>
+            <span id="dash-overdue-scheduled-count" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200/80 text-amber-950"></span>
+          </div>
+          <div id="dash-overdue-scheduled-list" class="divide-y divide-amber-200/70 text-sm text-slate-800"></div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- COBRANÇAS GERADAS (5 DIAS ANTES DO VENCIMENTO) -->
           <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
@@ -2161,8 +2173,48 @@
           `;
         }).join('');
 
+      renderOverdueScheduledAlertDashboard();
       renderGeneratedChargesDashboard();
       renderWaitlistDashboard();
+    }
+
+    function renderOverdueScheduledAlertDashboard() {
+      const box = document.getElementById('dash-overdue-scheduled-box');
+      const listEl = document.getElementById('dash-overdue-scheduled-list');
+      const countEl = document.getElementById('dash-overdue-scheduled-count');
+      if (!box || !listEl) return;
+
+      const nowMs = Date.now();
+      const overdueAgendadas = state.sessions
+        .filter(s => {
+          if ((s.status || 'agendada') !== 'agendada') return false;
+          const ms = new Date(s.data_hora || 0).getTime();
+          return !isNaN(ms) && ms < nowMs;
+        })
+        .sort((a, b) => new Date(b.data_hora || 0).getTime() - new Date(a.data_hora || 0).getTime());
+
+      if (!overdueAgendadas.length) {
+        box.classList.add('hidden');
+        listEl.innerHTML = '';
+        return;
+      }
+
+      box.classList.remove('hidden');
+      if (countEl) {
+        countEl.textContent = `${overdueAgendadas.length} ${overdueAgendadas.length === 1 ? 'sessão' : 'sessões'}`;
+      }
+
+      listEl.innerHTML = overdueAgendadas.map(s => `
+        <div onclick="openSessionModal('${s.id}')"
+          class="py-2.5 px-2 rounded-xl flex flex-wrap items-center justify-between gap-2 cursor-pointer hover:bg-amber-100/70 transition">
+          <div>
+            <span class="font-bold text-amber-950 mr-2">${fmtDateTime(s.data_hora)}</span>
+            <span class="font-semibold text-slate-900">${getPatientName(s.paciente_id)}</span>
+            <span class="text-xs text-slate-600 ml-2 capitalize">(${s.modalidade || 'presencial'} • Agendada)</span>
+          </div>
+          <span class="text-xs font-bold text-fuchsia-800 hover:underline">Atualizar status →</span>
+        </div>
+      `).join('');
     }
 
     function getDueDateInfoForPatient(patient) {
@@ -3541,23 +3593,16 @@
     function renderFinance() {
       const { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod } = getFinancePeriodContext();
 
-      // 1) Total previsto: soma de todas as sessões do mês anterior que geraram cobrança
-      const billedSessionsPrevMonth = state.sessions.filter(s => {
-        const sDateISO = (s.data_hora || '').slice(0, 10);
-        return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
-      });
-      const totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
-        const p = getPatient(s.paciente_id);
-        return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
-      }, 0);
+      // Helper para identificar se o lançamento pertence ao período atual (sessões do mês anterior ou vencimento no mês ativo)
+      const isItemInCurrentPeriod = (f) => {
+        if (!selectedYM) return true;
+        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        if (sesYM) return sesYM === sessionsMonthYM;
+        return (f.data_vencimento || '').startsWith(activeYM);
+      };
 
-      const prevLabel = new Date(sessionsMonthYM + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      const prevSubEl = document.getElementById('fin-sum-previsto-sub');
-      if (prevSubEl) {
-        prevSubEl.textContent = `Sessões de ${prevLabel} (${billedSessionsPrevMonth.length} cobrável(is))`;
-      }
-
-      // 2) Receitas pagas apenas do período + quadro separado de Recebimentos de outros períodos
+      // 1) Receitas pagas apenas do período + quadro separado de Recebimentos de outros períodos
       const paidItems = state.finance.filter(f => f.status === 'pago');
       const paidCurrentPeriod = paidItems.filter(f => isItemInCurrentPeriod(f));
       const otherPeriodPaid = paidItems.filter(f => {
@@ -3574,7 +3619,7 @@
         outrosPeriodosEl.textContent = fmtBRL(otherPeriodPaidTotal);
       }
 
-      // 3) Não pagos: à vencer, vencidas no período, e APENAS vencidas de períodos anteriores
+      // 2) Não pagos: à vencer, vencidas no período, e APENAS vencidas de períodos anteriores
       const unpaidCurrent = state.finance.filter(f => f.status !== 'pago' && isItemInCurrentPeriod(f));
       const unpaidOtherPeriodsOverdue = state.finance.filter(f => !isItemInCurrentPeriod(f) && isFinanceItemOverdue(f, todayISO));
 
@@ -3588,6 +3633,22 @@
 
       const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      // 3) Total previsto: soma apenas das sessões do mês anterior com status que gera cobrança
+      const billedSessionsPrevMonth = state.sessions.filter(s => {
+        const sDateISO = (s.data_hora || '').slice(0, 10);
+        return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
+      });
+      const totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
+        const p = getPatient(s.paciente_id);
+        return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
+      }, 0);
+
+      const prevLabel = new Date(sessionsMonthYM + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const prevSubEl = document.getElementById('fin-sum-previsto-sub');
+      if (prevSubEl) {
+        prevSubEl.textContent = `Sessões cobráveis de ${prevLabel} (${billedSessionsPrevMonth.length} sessão(ões))`;
+      }
 
       document.getElementById('fin-sum-previsto').textContent = fmtBRL(totalPrevisto);
       document.getElementById('fin-sum-pagas').textContent = fmtBRL(receitasPagas);
