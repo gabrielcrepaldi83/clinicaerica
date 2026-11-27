@@ -205,10 +205,10 @@
           <button onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Visão Geral</button>
           <button onclick="switchTab('agenda')" data-tab="agenda" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Agenda & Sessões</button>
           <button onclick="switchTab('pacientes')" data-tab="pacientes" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Pacientes</button>
+          <button onclick="switchTab('anamnese')" data-tab="anamnese" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Anamnese</button>
           <button onclick="switchTab('instrumentos')" data-tab="instrumentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Instrumentos</button>
           <button onclick="switchTab('documentos')" data-tab="documentos" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Documentos CFP</button>
-          <button onclick="switchTab('anamnese')" data-tab="anamnese" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Anamnese ACT</button>
-          <button onclick="switchTab('financeiro')" data-tab="financeiro" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Financeiro & IR</button>
+          <button onclick="switchTab('financeiro')" data-tab="financeiro" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Financeiro</button>
           <button onclick="switchTab('config')" data-tab="config" class="nav-btn flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">Configurações</button>
         </nav>
       </div>
@@ -554,12 +554,12 @@
         </form>
       </section>
 
-      <!-- ABA: ANAMNESE ACT -->
+      <!-- ABA: ANAMNESE -->
       <section id="tab-anamnese" class="tab-content hidden space-y-6 max-w-4xl">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-slate-900">Anamnese Clínica (ACT)</h1>
-            <p class="text-sm text-slate-500">Avaliação rápida e intuitiva orientada pela Terapia de Aceitação e Compromisso — sem repetir dados básicos do cadastro.</p>
+            <h1 class="text-2xl font-bold text-slate-900">Anamnese ACT</h1>
+            <p class="text-sm text-slate-500">Avaliação rápida e intuitiva orientada pela Terapia de Aceitação e Compromisso (sem repetir dados do cadastro).</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="printCurrentAnamnese()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">
@@ -586,7 +586,6 @@
         </div>
 
         <form id="anamnese-act-form" class="space-y-4">
-          <!-- 1. CONTEXTO ATUAL -->
           <details open class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <summary class="font-bold text-slate-900 text-sm cursor-pointer select-none">1. Contexto Atual e Histórico Clínico</summary>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
@@ -619,7 +618,6 @@
             </div>
           </details>
 
-          <!-- 2. QUEIXA PRINCIPAL E ANÁLISE FUNCIONAL (ABC) -->
           <details open class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <summary class="font-bold text-slate-900 text-sm cursor-pointer select-none">2. Queixa Principal e Análise Funcional (ABC)</summary>
             <div class="pt-2 space-y-3">
@@ -648,7 +646,6 @@
             </div>
           </details>
 
-          <!-- 3. MAPEAMENTO DE INFLEXIBILIDADE PSICOLÓGICA (HEXAFLEX) -->
           <details open class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
             <summary class="font-bold text-slate-900 text-sm cursor-pointer select-none">3. Mapeamento de Inflexibilidade Psicológica (Hexaflex)</summary>
 
@@ -752,7 +749,6 @@
             </div>
           </details>
 
-          <!-- 4. EXPECTATIVAS E CONTRATO TERAPÊUTICO -->
           <details open class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <summary class="font-bold text-slate-900 text-sm cursor-pointer select-none">4. Expectativas e Contrato Terapêutico</summary>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -1978,7 +1974,7 @@
     const LAST_PATIENT_KEY = 'anota_psi_last_patient_id';
 
     function switchTab(tabName) {
-      const validTabs = ['dashboard', 'agenda', 'pacientes', 'instrumentos', 'documentos', 'financeiro', 'config'];
+      const validTabs = ['dashboard', 'agenda', 'pacientes', 'anamnese', 'instrumentos', 'documentos', 'financeiro', 'config'];
       const targetTab = validTabs.includes(tabName) ? tabName : 'dashboard';
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById('tab-' + targetTab).classList.remove('hidden');
