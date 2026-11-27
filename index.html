@@ -3657,7 +3657,7 @@
       const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      // 3) Total previsto: sessões cobráveis do mês anterior (data local) + lançamentos do período cuja sessão vinculada é cobrável
+      // 3) Total previsto: soma das sessões cobráveis do mês anterior (usando valor do lançamento financeiro se existir, senão valor_sessao/paciente)
       const billedSessionsPrevMonth = state.sessions.filter(s => {
         const sDateISO = getLocalDateISOFromTimestamp(s.data_hora);
         return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
@@ -3665,6 +3665,10 @@
 
       const accountedSessionIds = new Set(billedSessionsPrevMonth.map(s => s.id));
       let totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
+        const linkedFin = state.finance.find(f => f.sessao_id === s.id);
+        if (linkedFin && Number(linkedFin.valor || 0) > 0) {
+          return acc + Number(linkedFin.valor);
+        }
         const p = getPatient(s.paciente_id);
         return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
       }, 0);
