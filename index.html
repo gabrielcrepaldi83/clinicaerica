@@ -1556,7 +1556,16 @@
     }
 
     function isChargedSessionStatus(status) {
-      return CHARGED_SESSION_STATUSES.includes(status);
+      if (!status) return false;
+      if (CHARGED_SESSION_STATUSES.includes(status)) return true;
+      const norm = String(status).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').trim();
+      return CHARGED_SESSION_STATUSES.includes(norm) || (norm.includes('cobrad') && !norm.includes('nao_cobrad'));
+    }
+
+    function isExplicitlyUnchargedSessionStatus(status) {
+      if (!status) return false;
+      const norm = String(status).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').trim();
+      return ['falta_justificada', 'cancelamento_nao_cobrado', 'cancelado_profissional', 'cancelada'].includes(norm);
     }
 
     function applySessionStatusSelectStyle(selectEl) {
@@ -3575,13 +3584,10 @@
 
       if (activeFinanceCardFilter === 'previsto') {
         return state.finance.filter(f => {
+          if (!isItemInCurrentPeriod(f)) return false;
           const ses = resolveSessionForFinanceItem(f);
-          if (ses) {
-            return getLocalDateISOFromTimestamp(ses.data_hora).startsWith(sessionsMonthYM) && isChargedSessionStatus(ses.status);
-          }
-          const descDate = extractDateISOFromDescription(f.descricao);
-          if (descDate) return descDate.startsWith(sessionsMonthYM);
-          return !f.sessao_id && (f.data_vencimento || '').startsWith(activeYM);
+          if (ses && isExplicitlyUnchargedSessionStatus(ses.status)) return false;
+          return true;
         });
       }
 
@@ -3657,33 +3663,31 @@
       const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      // 3) Total previsto: soma das sessões cobráveis do mês anterior (usando valor do lançamento financeiro se existir, senão valor_sessao/paciente)
-      const billedSessionsPrevMonth = state.sessions.filter(s => {
+      // 3) Total previsto: lançamentos cobráveis do período + sessões cobráveis do mês anterior ainda sem lançamento financeiro
+      const accountedSessionIds = new Set();
+      let totalPrevisto = 0;
+      let prevCountTotal = 0;
+
+      for (const f of state.finance) {
+        if (!isItemInCurrentPeriod(f)) continue;
+        const ses = resolveSessionForFinanceItem(f);
+        if (ses && isExplicitlyUnchargedSessionStatus(ses.status)) continue;
+        if (ses) accountedSessionIds.add(ses.id);
+        totalPrevisto += Number(f.valor || 0);
+        prevCountTotal++;
+      }
+
+      const unbilledChargedSessions = state.sessions.filter(s => {
+        if (accountedSessionIds.has(s.id)) return false;
         const sDateISO = getLocalDateISOFromTimestamp(s.data_hora);
         return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
       });
 
-      const accountedSessionIds = new Set(billedSessionsPrevMonth.map(s => s.id));
-      let totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
-        const linkedFin = state.finance.find(f => f.sessao_id === s.id);
-        if (linkedFin && Number(linkedFin.valor || 0) > 0) {
-          return acc + Number(linkedFin.valor);
-        }
+      for (const s of unbilledChargedSessions) {
         const p = getPatient(s.paciente_id);
-        return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
-      }, 0);
-
-      let extraCount = 0;
-      for (const f of state.finance) {
-        if (!isItemInCurrentPeriod(f)) continue;
-        const ses = resolveSessionForFinanceItem(f);
-        if (ses && accountedSessionIds.has(ses.id)) continue;
-        if (ses && !isChargedSessionStatus(ses.status)) continue;
-        totalPrevisto += Number(f.valor || 0);
-        extraCount++;
+        totalPrevisto += Number(s.valor_sessao || p?.valor_sessao || 0);
+        prevCountTotal++;
       }
-
-      const prevCountTotal = billedSessionsPrevMonth.length + extraCount;
       const prevLabel = new Date(sessionsMonthYM + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
       const prevSubEl = document.getElementById('fin-sum-previsto-sub');
       if (prevSubEl) {
