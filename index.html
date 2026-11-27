@@ -3515,6 +3515,38 @@
       return item.status !== 'pago' && (!item.data_vencimento || item.data_vencimento >= todayISO);
     }
 
+    function getLocalDateISOFromTimestamp(dtStr) {
+      if (!dtStr) return '';
+      if (dtStr.length === 10) return dtStr;
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return dtStr.slice(0, 10);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function extractDateISOFromDescription(desc) {
+      const m = String(desc || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (!m) return '';
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+
+    function resolveSessionForFinanceItem(f) {
+      if (f.sessao_id) {
+        const direct = state.sessions.find(s => s.id === f.sessao_id);
+        if (direct) return direct;
+      }
+      const descDateISO = extractDateISOFromDescription(f.descricao);
+      if (descDateISO && f.paciente_id) {
+        return state.sessions.find(s =>
+          s.paciente_id === f.paciente_id &&
+          getLocalDateISOFromTimestamp(s.data_hora) === descDateISO
+        ) || null;
+      }
+      return null;
+    }
+
     function getFinancePeriodContext() {
       const monthInput = document.getElementById('fin-filter-month');
       if (monthInput && !monthInput.dataset.initialized) {
@@ -3524,12 +3556,12 @@
       const selectedYM = monthInput?.value || '';
       const activeYM = selectedYM || getCurrentMonthYM();
       const sessionsMonthYM = getPreviousMonthYMFromYM(activeYM);
-      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayISO = getLocalDateISOFromTimestamp(new Date().toISOString());
 
       const isItemInCurrentPeriod = (f) => {
         if (!selectedYM) return true;
-        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
-        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        const ses = resolveSessionForFinanceItem(f);
+        const sesYM = ses ? getLocalDateISOFromTimestamp(ses.data_hora).slice(0, 7) : extractDateISOFromDescription(f.descricao).slice(0, 7);
         if (sesYM) return sesYM === sessionsMonthYM;
         return (f.data_vencimento || '').startsWith(activeYM);
       };
@@ -3541,15 +3573,14 @@
       const { selectedYM, activeYM, sessionsMonthYM, todayISO, isItemInCurrentPeriod } = getFinancePeriodContext();
 
       if (activeFinanceCardFilter === 'previsto') {
-        const billedSessionIds = new Set(
-          state.sessions
-            .filter(s => (s.data_hora || '').slice(0, 10).startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status))
-            .map(s => s.id)
-        );
         return state.finance.filter(f => {
-          if (f.sessao_id && billedSessionIds.has(f.sessao_id)) return true;
-          const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
-          return (ses?.data_hora || '').slice(0, 10).startsWith(sessionsMonthYM) && isChargedSessionStatus(ses?.status);
+          const ses = resolveSessionForFinanceItem(f);
+          if (ses) {
+            return getLocalDateISOFromTimestamp(ses.data_hora).startsWith(sessionsMonthYM) && isChargedSessionStatus(ses.status);
+          }
+          const descDate = extractDateISOFromDescription(f.descricao);
+          if (descDate) return descDate.startsWith(sessionsMonthYM);
+          return !f.sessao_id && (f.data_vencimento || '').startsWith(activeYM);
         });
       }
 
@@ -3625,20 +3656,33 @@
       const receitasVencidasAnteriores = unpaidOtherPeriodsOverdue
         .reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
-      // 3) Total previsto: apenas as sessões do mês anterior com status que gera cobrança
+      // 3) Total previsto: sessões cobráveis do mês anterior (data local) + lançamentos do período cuja sessão vinculada é cobrável
       const billedSessionsPrevMonth = state.sessions.filter(s => {
-        const sDateISO = (s.data_hora || '').slice(0, 10);
+        const sDateISO = getLocalDateISOFromTimestamp(s.data_hora);
         return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
       });
-      const totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
+
+      const accountedSessionIds = new Set(billedSessionsPrevMonth.map(s => s.id));
+      let totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
         const p = getPatient(s.paciente_id);
         return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
       }, 0);
 
+      let extraCount = 0;
+      for (const f of state.finance) {
+        if (!isItemInCurrentPeriod(f)) continue;
+        const ses = resolveSessionForFinanceItem(f);
+        if (ses && accountedSessionIds.has(ses.id)) continue;
+        if (ses && !isChargedSessionStatus(ses.status)) continue;
+        totalPrevisto += Number(f.valor || 0);
+        extraCount++;
+      }
+
+      const prevCountTotal = billedSessionsPrevMonth.length + extraCount;
       const prevLabel = new Date(sessionsMonthYM + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
       const prevSubEl = document.getElementById('fin-sum-previsto-sub');
       if (prevSubEl) {
-        prevSubEl.textContent = `Sessões cobráveis de ${prevLabel} (${billedSessionsPrevMonth.length} sessão(ões))`;
+        prevSubEl.textContent = `Sessões cobráveis de ${prevLabel} (${prevCountTotal} sessão(ões))`;
       }
 
       document.getElementById('fin-sum-previsto').textContent = fmtBRL(totalPrevisto);
