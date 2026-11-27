@@ -3431,7 +3431,7 @@
 
     const FINANCE_CARD_LABELS = {
       previsto: 'Total previsto (sessões cobráveis do mês anterior)',
-      pagas: 'Receitas pagas',
+      pagas: 'Receitas pagas (todos os recebimentos no mês)',
       avencer: 'Receitas à vencer',
       vencidas: 'Receitas vencidas',
       anteriores: 'Receitas vencidas de períodos anteriores'
@@ -3494,7 +3494,13 @@
       }
 
       if (activeFinanceCardFilter === 'pagas') {
-        return state.finance.filter(f => f.status === 'pago' && isItemInCurrentPeriod(f));
+        return state.finance.filter(f => {
+          if (f.status !== 'pago') return false;
+          if (!selectedYM) return true;
+          const pagYM = (f.data_pagamento || '').slice(0, 7);
+          const vencYM = (f.data_vencimento || '').slice(0, 7);
+          return pagYM === activeYM || (!pagYM && vencYM === activeYM) || isItemInCurrentPeriod(f);
+        });
       }
 
       if (activeFinanceCardFilter === 'avencer') {
@@ -3539,22 +3545,23 @@
         prevSubEl.textContent = `Sessões de ${prevLabel} (${billedSessionsPrevMonth.length} cobrável(is))`;
       }
 
-      // 2) Receitas pagas referente ao período atual + observação se houver recebimento atrasado de período anterior
+      // 2) Receitas pagas referente ao período atual + observação se houver recebimento de outro período (atrasado ou antecipado)
       const paidItems = state.finance.filter(f => f.status === 'pago');
       const paidCurrentPeriod = paidItems.filter(f => isItemInCurrentPeriod(f));
-      const latePaidEarlierPeriod = paidItems.filter(f => {
+      const otherPeriodPaid = paidItems.filter(f => {
         if (isItemInCurrentPeriod(f)) return false;
         const pagYM = (f.data_pagamento || '').slice(0, 7);
-        return selectedYM ? (pagYM === activeYM || (f.data_vencimento || '').slice(0, 7) < activeYM) : false;
+        const vencYM = (f.data_vencimento || '').slice(0, 7);
+        return selectedYM ? (pagYM === activeYM || vencYM !== activeYM) : false;
       });
 
       const receitasPagas = paidCurrentPeriod.reduce((acc, f) => acc + Number(f.valor || 0), 0);
-      const latePaidTotal = latePaidEarlierPeriod.reduce((acc, f) => acc + Number(f.valor || 0), 0);
+      const otherPeriodPaidTotal = otherPeriodPaid.reduce((acc, f) => acc + Number(f.valor || 0), 0);
 
       const obsEl = document.getElementById('fin-sum-pagas-obs');
       if (obsEl) {
-        if (latePaidTotal > 0) {
-          obsEl.textContent = `Obs: há ${fmtBRL(latePaidTotal)} recebido(s) referente a período anterior.`;
+        if (otherPeriodPaidTotal > 0) {
+          obsEl.textContent = `Obs: há ${fmtBRL(otherPeriodPaidTotal)} recebido(s) referente a outro período.`;
           obsEl.classList.remove('hidden');
         } else {
           obsEl.textContent = '';
