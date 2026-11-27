@@ -316,7 +316,7 @@
             <span id="week-range-label" class="text-sm font-bold text-slate-800"></span>
             <button onclick="shiftWeek(7)" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 cursor-pointer">Próxima Semana →</button>
           </div>
-          <div id="weekly-grid" class="grid grid-cols-1 md:grid-cols-6 gap-3"></div>
+          <div id="weekly-grid" class="grid grid-cols-1 md:grid-cols-5 gap-2.5"></div>
         </div>
 
         <div id="agenda-list-view" class="hidden bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -554,6 +554,27 @@
             <button onclick="exportIRCSV()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">Exportar CSV (Carnê-Leão)</button>
             <button onclick="openFinanceModal()" class="px-4 py-2 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-sm font-semibold cursor-pointer">+ Novo Lançamento</button>
           </div>
+        </div>
+
+        <!-- MODELO EDITÁVEL DA MENSAGEM DE COBRANÇA WHATSAPP -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Modelo da Mensagem de Cobrança (WhatsApp)</h2>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Variáveis disponíveis: <code class="bg-slate-100 px-1 rounded">{nome}</code>, <code class="bg-slate-100 px-1 rounded">{datas}</code>, <code class="bg-slate-100 px-1 rounded">{valor}</code>, <code class="bg-slate-100 px-1 rounded">{vencimento}</code> e <code class="bg-slate-100 px-1 rounded">{vencer}</code> (ajusta automaticamente para <em>vence</em> ou <em>vencem</em>).
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="resetBillingTemplateDefault()" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-600 cursor-pointer">
+                Restaurar Padrão
+              </button>
+              <button type="button" onclick="saveBillingTemplate()" class="px-3.5 py-1.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">
+                Salvar Modelo
+              </button>
+            </div>
+          </div>
+          <textarea id="fin-billing-template" rows="3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-fuchsia-600"></textarea>
         </div>
 
         <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1230,6 +1251,78 @@
       }
     }
 
+
+    function computeNextMonthDueDateISO(sessionDateStr, diaVencimento) {
+      const baseDate = sessionDateStr
+        ? new Date(sessionDateStr + (sessionDateStr.length === 10 ? 'T12:00:00' : ''))
+        : new Date();
+      const targetDay = Number(diaVencimento || 0);
+      const dayToUse = (targetDay >= 1 && targetDay <= 31) ? targetDay : baseDate.getDate();
+      const nextMonthYear = baseDate.getFullYear();
+      const nextMonthIdx = baseDate.getMonth() + 1;
+      const maxDays = new Date(nextMonthYear, nextMonthIdx + 1, 0).getDate();
+      const dueDate = new Date(nextMonthYear, nextMonthIdx, Math.min(dayToUse, maxDays), 12, 0, 0);
+      return dueDate.toISOString().slice(0, 10);
+    }
+
+
+    const BILLING_TEMPLATE_STORAGE_KEY = 'anota_psi_billing_template';
+    const DEFAULT_BILLING_TEMPLATE =
+      'Olá, {nome}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de {datas}, no valor de R$ {valor}, {vencer} no dia {vencimento}. Qualquer dúvida, estou à disposição!';
+
+    function getBillingTemplate() {
+      const fromInput = document.getElementById('fin-billing-template')?.value?.trim();
+      if (fromInput) return fromInput;
+      if (state.config?.msg_cobranca) return state.config.msg_cobranca;
+      try {
+        const local = localStorage.getItem(BILLING_TEMPLATE_STORAGE_KEY);
+        if (local && local.trim()) return local.trim();
+      } catch (_e) {}
+      return DEFAULT_BILLING_TEMPLATE;
+    }
+
+    function formatBillingMessageFromTemplate({ firstName, datesText, datesCount, valText, venc }) {
+      const tpl = getBillingTemplate();
+      const verbVencer = datesCount > 1 ? 'vencem' : 'vence';
+      return tpl
+        .replace(/\{nome\}/gi, firstName)
+        .replace(/\{datas\}/gi, datesText)
+        .replace(/\{valor\}/gi, valText)
+        .replace(/\{vencimento\}/gi, venc)
+        .replace(/\{vencer\}/gi, verbVencer);
+    }
+
+    async function saveBillingTemplate() {
+      const textarea = document.getElementById('fin-billing-template');
+      const value = (textarea?.value || '').trim() || DEFAULT_BILLING_TEMPLATE;
+      if (textarea) textarea.value = value;
+      try { localStorage.setItem(BILLING_TEMPLATE_STORAGE_KEY, value); } catch (_e) {}
+
+      if (currentUser?.id) {
+        const { error } = await sb
+          .from('configuracoes_profissional')
+          .upsert({
+            user_id: currentUser.id,
+            nome_completo: state.config?.nome_completo || document.getElementById('cfg-nome')?.value?.trim() || 'Psicóloga',
+            msg_cobranca: value,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (!error) {
+          if (!state.config) state.config = {};
+          state.config.msg_cobranca = value;
+        }
+      }
+      renderGeneratedChargesDashboard();
+      showToast('Modelo de mensagem de cobrança salvo!');
+    }
+
+    function resetBillingTemplateDefault() {
+      const textarea = document.getElementById('fin-billing-template');
+      if (textarea) textarea.value = DEFAULT_BILLING_TEMPLATE;
+      saveBillingTemplate();
+    }
+
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
     const fmtDateTime = (dt) => dt ? new Date(dt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
@@ -1378,7 +1471,16 @@
       state.medications = medRes.data || [];
       state.sessions = sesRes.data || [];
       state.instruments = instRes.data || [];
-      state.finance = finRes.data || [];
+      state.finance = (finRes.data || []).map(f => {
+        if (f.status === 'pendente' && f.sessao_id) {
+          const ses = state.sessions.find(s => s.id === f.sessao_id);
+          const pat = ses ? getPatient(ses.paciente_id) : getPatient(f.paciente_id);
+          if (ses?.data_hora && pat?.dia_vencimento) {
+            return { ...f, data_vencimento: computeNextMonthDueDateISO(ses.data_hora.slice(0, 10), pat.dia_vencimento) };
+          }
+        }
+        return f;
+      });
       state.attachments = attRes.data || [];
 
       applyConfigToUI();
@@ -1403,6 +1505,12 @@
         document.getElementById('cfg-pix').value = state.config.chave_pix || '';
         document.getElementById('cfg-pin').value = state.config.pin_bloqueio || '';
         document.getElementById('cfg-whatsapp').value = state.config.msg_whatsapp || 'Olá {nome}, passando para confirmar nossa sessão {data} às {hora}.';
+      }
+      const billTplEl = document.getElementById('fin-billing-template');
+      if (billTplEl) {
+        let localTpl = '';
+        try { localTpl = localStorage.getItem(BILLING_TEMPLATE_STORAGE_KEY) || ''; } catch (_e) {}
+        billTplEl.value = state.config?.msg_cobranca || localTpl || DEFAULT_BILLING_TEMPLATE;
       }
     }
 
@@ -1595,13 +1703,22 @@
         const unpaidPrev = getUnpaidSessionsForBillingMonth(p.id, targetYM);
         if (!unpaidPrev.length) continue;
 
+        const firstSesISO = unpaidPrev[0].data_hora?.slice(0, 10);
+        const computedDueISO = computeNextMonthDueDateISO(firstSesISO, p.dia_vencimento);
+        const computedDDMM = computedDueISO ? `${computedDueISO.slice(8, 10)}/${computedDueISO.slice(5, 7)}` : dueInfo.ddmm;
+
         const totalVal = unpaidPrev.reduce((acc, s) => acc + Number(s.valor_sessao || p.valor_sessao || 0), 0);
         const datesBR = unpaidPrev.map(s => fmtDate(s.data_hora?.slice(0, 10)));
         const firstName = (p.nome_completo || 'Paciente').trim().split(/\s+/)[0];
         const datesText = formatDatesWithAnd(datesBR);
-        const verbVencer = datesBR.length > 1 ? 'vencem' : 'vence';
         const valFormatted = totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const msg = `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valFormatted}, ${verbVencer} no dia ${dueInfo.ddmm}. Qualquer dúvida, estou à disposição!`;
+        const msg = formatBillingMessageFromTemplate({
+          firstName,
+          datesText,
+          datesCount: datesBR.length,
+          valText: valFormatted,
+          venc: computedDDMM
+        });
 
         items.push({
           patientId: p.id,
@@ -2281,18 +2398,18 @@
       monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
 
       const days = [];
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 5; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
         days.push(d);
       }
 
       document.getElementById('week-range-label').textContent =
-        `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${days[5].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+        `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} a ${days[4].toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
 
       const startHour = 7;
       const endHour = 21;
-      const hourHeight = 56; // 56px por hora completa
+      const hourHeight = 36; // 36px por hora completa para caber melhor na tela
       const totalHours = endHour - startHour;
       const personalEvents = getPersonalEvents();
 
@@ -2459,13 +2576,14 @@
               .update({ sessoes_pacote_usadas: (paciente.sessoes_pacote_usadas || 0) + 1 })
               .eq('id', pacienteId);
           } else if (valor > 0 && !state.finance.some(f => f.sessao_id === id)) {
+            const sesISO = baseDate.toISOString().slice(0, 10);
             await sb.from('financeiro').insert({
               user_id: currentUser.id,
               paciente_id: pacienteId,
               sessao_id: id,
-              descricao: `${getSessionStatusLabel(status)} — ${fmtDate(baseDate.toISOString().slice(0, 10))}`,
+              descricao: `${getSessionStatusLabel(status)} — ${fmtDate(sesISO)}`,
               valor,
-              data_vencimento: baseDate.toISOString().slice(0, 10),
+              data_vencimento: computeNextMonthDueDateISO(sesISO, paciente?.dia_vencimento),
               status: 'pendente'
             });
           }
@@ -2507,13 +2625,14 @@
                 .update({ sessoes_pacote_usadas: (paciente.sessoes_pacote_usadas || 0) + 1 })
                 .eq('id', pacienteId);
             } else if (valor > 0) {
+              const firstISO = first.data_hora.slice(0, 10);
               await sb.from('financeiro').insert({
                 user_id: currentUser.id,
                 paciente_id: pacienteId,
                 sessao_id: first.id,
-                descricao: `${getSessionStatusLabel(status)} — ${fmtDate(first.data_hora.slice(0, 10))}`,
+                descricao: `${getSessionStatusLabel(status)} — ${fmtDate(firstISO)}`,
                 valor,
-                data_vencimento: first.data_hora.slice(0, 10),
+                data_vencimento: computeNextMonthDueDateISO(firstISO, paciente?.dia_vencimento),
                 status: 'pendente'
               });
             }
@@ -3071,13 +3190,17 @@
       const checked = Array.from(document.querySelectorAll('.bill-ses-checkbox:checked'));
       const dates = checked.map(el => el.dataset.date).filter(Boolean);
       const datesText = formatDatesWithAnd(dates);
-      const verbVencer = dates.length > 1 ? 'vencem' : 'vence';
       const rawVal = Number(document.getElementById('bill-wa-valor')?.value || 0);
       const valText = rawVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const venc = (document.getElementById('bill-wa-vencimento')?.value || '').trim() || 'DD/MM';
 
-      document.getElementById('bill-wa-mensagem').value =
-        `Olá, ${firstName}! Tudo bem? Passando para lembrar que o pagamento referente às sessões de ${datesText}, no valor de R$ ${valText}, ${verbVencer} no dia ${venc}. Qualquer dúvida, estou à disposição!`;
+      document.getElementById('bill-wa-mensagem').value = formatBillingMessageFromTemplate({
+        firstName,
+        datesText,
+        datesCount: dates.length,
+        valText,
+        venc
+      });
     }
 
     function sendBillingWhatsApp() {
