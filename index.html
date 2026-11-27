@@ -1887,6 +1887,27 @@
       window.print();
     }
 
+    function toLocalDateTimeInputValue(dtInput) {
+      const d = dtInput ? new Date(dtInput) : new Date();
+      if (isNaN(d.getTime())) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${day}T${hh}:${mm}`;
+    }
+
+    function toLocalDateISO(d) {
+      if (!d) return '';
+      const dt = (d instanceof Date) ? d : new Date(d);
+      if (isNaN(dt.getTime())) return '';
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '—';
     const fmtDateTime = (dt) => dt ? new Date(dt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
@@ -2972,9 +2993,7 @@
       const ev = eventId ? getPersonalEvents().find(item => item.id === eventId) : null;
       document.getElementById('per-id').value = ev?.id || '';
       document.getElementById('per-titulo').value = ev?.titulo || '';
-      document.getElementById('per-datahora').value = ev?.data_hora
-        ? new Date(ev.data_hora).toISOString().slice(0, 16)
-        : new Date().toISOString().slice(0, 16);
+      document.getElementById('per-datahora').value = toLocalDateTimeInputValue(ev?.data_hora);
       document.getElementById('per-duracao').value = ev?.duracao_minutos || 60;
       document.getElementById('per-obs').value = ev?.observacoes || '';
       document.getElementById('per-delete-btn').classList.toggle('hidden', !ev);
@@ -3041,10 +3060,10 @@
 
       const grid = document.getElementById('weekly-grid');
       grid.innerHTML = days.map(d => {
-        const iso = d.toISOString().slice(0, 10);
+        const iso = toLocalDateISO(d);
 
         const sessionItems = state.sessions
-          .filter(s => s.data_hora?.slice(0, 10) === iso)
+          .filter(s => toLocalDateISO(s.data_hora) === iso)
           .map(s => {
             const dt = new Date(s.data_hora);
             const minsFromStart = ((dt.getHours() - startHour) * 60) + dt.getMinutes();
@@ -3064,7 +3083,7 @@
           });
 
         const personalItems = personalEvents
-          .filter(ev => ev.data_hora?.slice(0, 10) === iso)
+          .filter(ev => toLocalDateISO(ev.data_hora) === iso)
           .map(ev => {
             const dt = new Date(ev.data_hora);
             const minsFromStart = ((dt.getHours() - startHour) * 60) + dt.getMinutes();
@@ -3151,7 +3170,7 @@
       const s = sessionId ? state.sessions.find(item => item.id === sessionId) : null;
       document.getElementById('ses-id').value = s?.id || '';
       document.getElementById('ses-paciente').value = s?.paciente_id || '';
-      document.getElementById('ses-datahora').value = s?.data_hora ? new Date(s.data_hora).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+      document.getElementById('ses-datahora').value = toLocalDateTimeInputValue(s?.data_hora);
       document.getElementById('ses-modalidade').value = s?.modalidade || 'presencial';
       document.getElementById('ses-duracao').value = s?.duracao_minutos || 50;
       const stEl = document.getElementById('ses-status');
