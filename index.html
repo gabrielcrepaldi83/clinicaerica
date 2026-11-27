@@ -1172,6 +1172,24 @@
           <label class="block text-xs font-semibold text-slate-600 mb-1">Objetivos e Plano de Tratamento</label>
           <textarea id="pat-plano" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
         </div>
+        <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <label class="block text-xs font-bold text-amber-950">Autorização Expressa de Uso da IA para Gravação</label>
+              <p class="text-[11px] text-amber-900/80">Obrigatória para liberar a gravação da sessão com IA. O áudio é usado apenas para transcrição resumida e resumo dos pontos principais.</p>
+            </div>
+            <button type="button" onclick="printAIAuthorizationModel()"
+              class="px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100/60 text-amber-950 text-xs font-semibold cursor-pointer">
+              Modelo de Autorização (PDF / Imprimir)
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <input id="pat-ai-auth-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.txt"
+              class="text-xs text-slate-700 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-200/80 file:text-amber-950" />
+            <span id="pat-ai-auth-status" class="text-xs font-semibold text-slate-600">Nenhuma autorização anexada.</span>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">Anamnese / Observações / Diagnóstico ou Encerramento</label>
           <textarea id="pat-anamnese" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
@@ -1328,6 +1346,63 @@
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Total de Encontros</label>
               <input id="ses-repeat-count" type="number" min="2" max="24" value="4" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-fuchsia-50/60 border border-fuchsia-200 rounded-xl p-3 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="text-xs font-bold text-fuchsia-950">Gravação Temporária para Transcrição Resumida e Resumo</p>
+              <p class="text-[11px] text-slate-600">O áudio fica apenas na memória da sessão atual para gerar transcrição resumida e pontos principais (não é salvo no armazenamento).</p>
+              <p id="ses-rec-auth-notice" class="text-[11px] font-semibold text-amber-800 mt-0.5"></p>
+            </div>
+            <span id="ses-rec-timer" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white border border-fuchsia-200 text-fuchsia-800">00:00</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="btn-rec-start" onclick="startSessionAudioRecording()"
+              class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer">
+              ● Gravar
+            </button>
+            <button type="button" id="btn-rec-pause" onclick="togglePauseSessionAudioRecording()" disabled
+              class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold disabled:opacity-40 cursor-pointer">
+              Pausar
+            </button>
+            <button type="button" id="btn-rec-stop" onclick="stopSessionAudioRecording()" disabled
+              class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold disabled:opacity-40 cursor-pointer">
+              ■ Parar
+            </button>
+            <button type="button" id="btn-rec-discard" onclick="discardSessionAudioRecording()" disabled
+              class="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold disabled:opacity-40 cursor-pointer">
+              Descartar Áudio
+            </button>
+            <button type="button" id="btn-rec-process" onclick="transcribeAndSummarizeSessionAudio()" disabled
+              class="ml-auto px-3.5 py-1.5 rounded-lg bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold disabled:opacity-40 cursor-pointer">
+              Transcrever e Resumir
+            </button>
+          </div>
+
+          <audio id="ses-rec-player" controls class="hidden w-full h-8"></audio>
+
+          <div id="ses-rec-results" class="hidden space-y-2 pt-1 border-t border-fuchsia-200/70">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[11px] font-bold text-slate-700">Resumo dos Pontos Principais (Rascunho)</label>
+                <button type="button" onclick="applyTextToEvolution('ses-rec-summary')" class="text-[11px] font-semibold text-fuchsia-700 hover:underline cursor-pointer">
+                  Inserir Resumo na Evolução
+                </button>
+              </div>
+              <textarea id="ses-rec-summary" rows="3" placeholder="Pontos principais da sessão..." class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs"></textarea>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[11px] font-bold text-slate-700">Transcrição Resumida</label>
+                <button type="button" onclick="applyTextToEvolution('ses-rec-transcript')" class="text-[11px] font-semibold text-fuchsia-700 hover:underline cursor-pointer">
+                  Inserir Transcrição na Evolução
+                </button>
+              </div>
+              <textarea id="ses-rec-transcript" rows="3" placeholder="Transcrição bem resumida..." class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs"></textarea>
             </div>
           </div>
         </div>
@@ -1953,7 +2028,10 @@
     }
 
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function closeModal(id) {
+      if (id === 'session-modal') resetSessionAudioState(true);
+      document.getElementById(id).classList.add('hidden');
+    }
 
     // BLOQUEIO POR INATIVIDADE
     function resetInactivityTimer() {
@@ -2445,6 +2523,19 @@
       renderPatientColorSwatches('#a21caf');
       document.getElementById('pat-id').value = patient?.id || '';
       document.getElementById('patient-modal-title').textContent = patient ? 'Editar Paciente' : 'Novo Paciente';
+      const authFileEl = document.getElementById('pat-ai-auth-file');
+      if (authFileEl) authFileEl.value = '';
+      const authStatusEl = document.getElementById('pat-ai-auth-status');
+      if (authStatusEl) {
+        const existingAuth = patient ? state.attachments.find(a => a.paciente_id === patient.id && isAIAuthorizationAttachment(a)) : null;
+        if (existingAuth) {
+          authStatusEl.textContent = `Autorização anexada: ${existingAuth.nome_arquivo}`;
+          authStatusEl.className = 'text-xs font-semibold text-emerald-700';
+        } else {
+          authStatusEl.textContent = 'Nenhuma autorização anexada (gravação com IA bloqueada até anexar).';
+          authStatusEl.className = 'text-xs font-semibold text-amber-800';
+        }
+      }
       if (patient) {
         document.getElementById('pat-nome').value = patient.nome_completo || '';
         document.getElementById('pat-cpf').value = formatCPFValue(patient.cpf || '');
@@ -2511,9 +2602,28 @@
 
       const res = id
         ? await sb.from('pacientes').update(payload).eq('id', id)
-        : await sb.from('pacientes').insert(payload);
+        : await sb.from('pacientes').insert(payload).select();
 
       if (res.error) return showToast('Erro ao salvar paciente.');
+      const savedPatientId = id || res.data?.[0]?.id || state.patients.find(p => p.nome_completo === payload.nome_completo)?.id;
+      const authInput = document.getElementById('pat-ai-auth-file');
+      const authFile = authInput?.files?.[0];
+      if (authFile && savedPatientId) {
+        const safeName = authFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${currentUser.id}/${savedPatientId}/${Date.now()}_autorizacao_ia_${safeName}`;
+        const { error: upErr } = await sb.storage.from('prontuarios-anexos').upload(path, authFile);
+        if (!upErr) {
+          await sb.from('anexos_paciente').insert({
+            user_id: currentUser.id,
+            paciente_id: savedPatientId,
+            nome_arquivo: authFile.name,
+            caminho_storage: path,
+            categoria: 'Autorização IA'
+          });
+        } else {
+          showToast('Paciente salvo, mas houve erro ao enviar o arquivo da autorização.');
+        }
+      }
       closeModal('patient-modal');
       showToast('Paciente salvo!');
       await loadAllData();
@@ -3153,6 +3263,7 @@
     }
 
     function onSessionPatientChange() {
+      syncSessionRecorderAuthorizationUI();
       const isEditing = Boolean(document.getElementById('ses-id').value);
       if (isEditing) return;
       const pacienteId = document.getElementById('ses-paciente').value;
@@ -3165,7 +3276,320 @@
       sesStatusSelect.addEventListener('change', () => applySessionStatusSelectStyle(sesStatusSelect));
     }
 
+    function isAIAuthorizationAttachment(att) {
+      const cat = String(att?.categoria || '').toLowerCase();
+      const fname = String(att?.nome_arquivo || '').toLowerCase();
+      return cat.includes('autoriza') || fname.includes('autorizacao') || fname.includes('autorização');
+    }
+
+    function hasPatientAIAuthorization(patientId) {
+      if (!patientId) return false;
+      return state.attachments.some(a => a.paciente_id === patientId && isAIAuthorizationAttachment(a));
+    }
+
+    function syncSessionRecorderAuthorizationUI() {
+      const patientId = document.getElementById('ses-paciente')?.value || '';
+      const noticeEl = document.getElementById('ses-rec-auth-notice');
+      const bStart = document.getElementById('btn-rec-start');
+      const isActiveRec = sesMediaRecorder && sesMediaRecorder.state !== 'inactive';
+
+      if (!patientId) {
+        if (noticeEl) {
+          noticeEl.textContent = 'Selecione o paciente e verifique se há autorização expressa de uso da IA anexada no cadastro.';
+          noticeEl.className = 'text-[11px] font-semibold text-amber-800 mt-0.5';
+        }
+        if (bStart && !isActiveRec) bStart.disabled = true;
+        return;
+      }
+
+      const authorized = hasPatientAIAuthorization(patientId);
+      if (authorized) {
+        if (noticeEl) {
+          noticeEl.textContent = 'Autorização expressa de uso da IA anexada no cadastro do paciente. Gravação habilitada.';
+          noticeEl.className = 'text-[11px] font-semibold text-emerald-700 mt-0.5';
+        }
+        if (bStart && !isActiveRec) bStart.disabled = false;
+      } else {
+        if (noticeEl) {
+          noticeEl.textContent = 'Gravação bloqueada: anexe a autorização expressa de uso da IA no cadastro do paciente para habilitar.';
+          noticeEl.className = 'text-[11px] font-semibold text-red-600 mt-0.5';
+        }
+        if (bStart) bStart.disabled = true;
+      }
+    }
+
+    function printAIAuthorizationModel() {
+      const cfg = state.config || {};
+      const patName = (document.getElementById('pat-nome')?.value || '').trim() || '________________________________________';
+      const patCpf = (document.getElementById('pat-cpf')?.value || '').trim() || '______________________';
+      const respNome = (document.getElementById('pat-resp-nome')?.value || '').trim();
+      const respCpf = (document.getElementById('pat-resp-cpf')?.value || '').trim();
+
+      document.getElementById('print-area').innerHTML = `
+        <div class="border border-slate-300 rounded-xl p-10 space-y-6 text-sm leading-relaxed">
+          <div class="border-b pb-4">
+            <h1 class="text-xl font-bold">${cfg.nome_completo || 'Psicóloga'}</h1>
+            <p class="text-xs text-slate-600">${cfg.crp || ''} ${cfg.endereco_consultorio ? '• ' + cfg.endereco_consultorio : ''}</p>
+          </div>
+          <h2 class="text-base font-bold uppercase tracking-wider text-center">Autorização Expressa para Uso Temporário de Gravação com Inteligência Artificial</h2>
+          <p>
+            Eu, <strong>${patName}</strong>, inscrito(a) no CPF sob o nº <strong>${patCpf}</strong>${respNome ? `, representado(a) por <strong>${respNome}</strong> (CPF: <strong>${respCpf || '—'}</strong>)` : ''}, autorizo de forma livre, informada e expressa a gravação temporária de áudio das sessões de atendimento psicológico conduzidas por <strong>${cfg.nome_completo || 'a profissional responsável'}</strong> (${cfg.crp || 'CRP'}), com a finalidade exclusiva de gerar <strong>transcrição resumida</strong> e <strong>resumo dos pontos principais</strong> como apoio à evolução clínica.
+          </p>
+          <p>
+            Declaro estar ciente de que: (1) o arquivo de áudio não é armazenado permanentemente no sistema ou em repositório de arquivos após o processamento; (2) a transcrição resumida e o resumo têm caráter de rascunho de apoio sob revisão profissional, preservando o sigilo ético previsto no Código de Ética Profissional do Psicólogo; e (3) posso revogar esta autorização a qualquer momento mediante comunicação expressa.
+          </p>
+          <p class="text-xs text-slate-600 pt-4">Local e data: ___________________________, ____/____/2026.</p>
+          <div class="pt-12 grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-xs">
+            <div class="border-t border-slate-400 pt-2">
+              Assinatura do(a) Paciente / Responsável
+            </div>
+            <div class="border-t border-slate-400 pt-2">
+              ${cfg.nome_completo || 'Psicóloga Responsável'}<br/>
+              <span>${cfg.crp || ''}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      window.print();
+    }
+
+    // GRAVAÇÃO TEMPORÁRIA DE ÁUDIO PARA TRANSCRIÇÃO E RESUMO (ÁUDIO NÃO É SALVO)
+    let sesMediaRecorder = null;
+    let sesAudioChunks = [];
+    let sesAudioBlob = null;
+    let sesAudioUrl = null;
+    let sesRecSeconds = 0;
+    let sesRecInterval = null;
+    let sesRecPaused = false;
+
+    function formatRecTimer(sec) {
+      const m = String(Math.floor(sec / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function updateRecButtonsUI(recordingState) {
+      const bStart = document.getElementById('btn-rec-start');
+      const bPause = document.getElementById('btn-rec-pause');
+      const bStop = document.getElementById('btn-rec-stop');
+      const bDiscard = document.getElementById('btn-rec-discard');
+      const bProcess = document.getElementById('btn-rec-process');
+      if (!bStart) return;
+
+      if (recordingState === 'recording') {
+        bStart.disabled = true;
+        bPause.disabled = false;
+        bPause.textContent = 'Pausar';
+        bStop.disabled = false;
+        bDiscard.disabled = true;
+        bProcess.disabled = true;
+      } else if (recordingState === 'paused') {
+        bStart.disabled = true;
+        bPause.disabled = false;
+        bPause.textContent = 'Retomar';
+        bStop.disabled = false;
+        bDiscard.disabled = true;
+        bProcess.disabled = true;
+      } else {
+        bStart.disabled = false;
+        bPause.disabled = true;
+        bPause.textContent = 'Pausar';
+        bStop.disabled = true;
+        bDiscard.disabled = !sesAudioBlob;
+        bProcess.disabled = !sesAudioBlob;
+      }
+    }
+
+    function resetSessionAudioState(clearTexts = false) {
+      clearInterval(sesRecInterval);
+      sesRecInterval = null;
+      sesRecSeconds = 0;
+      sesRecPaused = false;
+      sesAudioChunks = [];
+      sesAudioBlob = null;
+      if (sesAudioUrl) {
+        URL.revokeObjectURL(sesAudioUrl);
+        sesAudioUrl = null;
+      }
+      const timerEl = document.getElementById('ses-rec-timer');
+      if (timerEl) timerEl.textContent = '00:00';
+      const player = document.getElementById('ses-rec-player');
+      if (player) {
+        player.pause();
+        player.removeAttribute('src');
+        player.classList.add('hidden');
+      }
+      if (clearTexts) {
+        const tEl = document.getElementById('ses-rec-transcript');
+        const sEl = document.getElementById('ses-rec-summary');
+        const boxEl = document.getElementById('ses-rec-results');
+        if (tEl) tEl.value = '';
+        if (sEl) sEl.value = '';
+        if (boxEl) boxEl.classList.add('hidden');
+      }
+      updateRecButtonsUI('idle');
+    }
+
+    async function startSessionAudioRecording() {
+      const patientId = document.getElementById('ses-paciente')?.value || '';
+      if (!hasPatientAIAuthorization(patientId)) {
+        syncSessionRecorderAuthorizationUI();
+        return showToast('É necessário anexar a autorização expressa de uso da IA no cadastro do paciente antes de gravar.');
+      }
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        return showToast('Gravação de áudio não suportada neste navegador.');
+      }
+      try {
+        resetSessionAudioState(false);
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+
+        sesMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        sesMediaRecorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) sesAudioChunks.push(ev.data);
+        };
+        sesMediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const finalType = sesMediaRecorder?.mimeType || 'audio/webm';
+          sesAudioBlob = new Blob(sesAudioChunks, { type: finalType });
+          sesAudioChunks = [];
+          if (sesAudioBlob.size > 0) {
+            sesAudioUrl = URL.createObjectURL(sesAudioBlob);
+            const player = document.getElementById('ses-rec-player');
+            if (player) {
+              player.src = sesAudioUrl;
+              player.classList.remove('hidden');
+            }
+          }
+          updateRecButtonsUI('idle');
+        };
+
+        sesMediaRecorder.start(1000);
+        sesRecInterval = setInterval(() => {
+          if (!sesRecPaused) {
+            sesRecSeconds++;
+            const timerEl = document.getElementById('ses-rec-timer');
+            if (timerEl) timerEl.textContent = formatRecTimer(sesRecSeconds);
+          }
+        }, 1000);
+        updateRecButtonsUI('recording');
+        showToast('Gravação iniciada (áudio temporário apenas para transcrição e resumo).');
+      } catch (_err) {
+        showToast('Permissão de microfone negada ou indisponível.');
+      }
+    }
+
+    function togglePauseSessionAudioRecording() {
+      if (!sesMediaRecorder) return;
+      if (sesMediaRecorder.state === 'recording') {
+        sesMediaRecorder.pause();
+        sesRecPaused = true;
+        updateRecButtonsUI('paused');
+      } else if (sesMediaRecorder.state === 'paused') {
+        sesMediaRecorder.resume();
+        sesRecPaused = false;
+        updateRecButtonsUI('recording');
+      }
+    }
+
+    function stopSessionAudioRecording() {
+      clearInterval(sesRecInterval);
+      sesRecInterval = null;
+      sesRecPaused = false;
+      if (sesMediaRecorder && sesMediaRecorder.state !== 'inactive') {
+        sesMediaRecorder.stop();
+      }
+    }
+
+    function discardSessionAudioRecording() {
+      resetSessionAudioState(false);
+      showToast('Áudio temporário descartado da memória.');
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = String(reader.result || '');
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function transcribeAndSummarizeSessionAudio() {
+      if (!sesAudioBlob || sesAudioBlob.size === 0) {
+        return showToast('Grave ou pare um áudio antes de transcrever.');
+      }
+      const btn = document.getElementById('btn-rec-process');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Processando...';
+      }
+
+      try {
+        const audioBase64 = await blobToBase64(sesAudioBlob);
+        const { data, error } = await sb.functions.invoke('transcribe-summarize-session', {
+          body: {
+            audioBase64,
+            mimeType: sesAudioBlob.type || 'audio/webm',
+            durationSeconds: sesRecSeconds,
+            persistAudio: false,
+            conciseTranscript: true,
+            summaryPrompt: 'Resuma os pontos principais da sessão e forneça uma transcrição bem resumida.'
+          }
+        });
+
+        const boxEl = document.getElementById('ses-rec-results');
+        const tEl = document.getElementById('ses-rec-transcript');
+        const sEl = document.getElementById('ses-rec-summary');
+
+        if (error || !data) {
+          if (boxEl) boxEl.classList.remove('hidden');
+          if (sEl && !sEl.value.trim()) {
+            sEl.value = 'Pontos principais da sessão:
+- ';
+          }
+          if (tEl && !tEl.value.trim()) {
+            tEl.value = `Transcrição resumida (${formatRecTimer(sesRecSeconds)}): [Aguardando resposta da Edge Function "transcribe-summarize-session" com transcrição resumida e sem armazenamento de áudio.]`;
+          }
+          showToast('Configure a Edge Function "transcribe-summarize-session" no Supabase para gerar transcrição e resumo automáticos.');
+        } else {
+          if (boxEl) boxEl.classList.remove('hidden');
+          if (tEl) tEl.value = data.transcript || data.transcricao || '';
+          if (sEl) sEl.value = data.summary || data.resumo || '';
+          showToast('Transcrição e resumo gerados!');
+        }
+      } catch (_err) {
+        showToast('Erro ao processar o áudio.');
+      } finally {
+        // Descarta o blob de áudio após o processamento, mantendo o foco em transcrição e resumo
+        resetSessionAudioState(false);
+        if (btn) {
+          btn.textContent = 'Transcrever e Resumir';
+        }
+        updateRecButtonsUI('idle');
+      }
+    }
+
+    function applyTextToEvolution(sourceTextareaId) {
+      const src = document.getElementById(sourceTextareaId);
+      const evo = document.getElementById('ses-evolucao');
+      if (!src || !evo) return;
+      const val = src.value.trim();
+      if (!val) return showToast('Nada para inserir.');
+      evo.value = evo.value.trim() ? `${evo.value.trim()}
+
+${val}` : val;
+      showToast('Inserido na evolução clínica!');
+    }
+
     function openSessionModal(sessionId = null) {
+      resetSessionAudioState(true);
       document.getElementById('session-form').reset();
       const s = sessionId ? state.sessions.find(item => item.id === sessionId) : null;
       document.getElementById('ses-id').value = s?.id || '';
@@ -3181,6 +3605,7 @@
       document.getElementById('ses-finalizado').checked = Boolean(s?.prontuario_finalizado);
       document.getElementById('ses-evolucao').disabled = Boolean(s?.prontuario_finalizado);
       document.getElementById('ses-recurrence-box').classList.toggle('hidden', Boolean(s));
+      syncSessionRecorderAuthorizationUI();
       openModal('session-modal');
     }
 
