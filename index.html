@@ -770,7 +770,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-slate-900">Financeiro, Recibos & Carnê-Leão</h1>
-            <p class="text-sm text-slate-500">Controle de recebimentos, recibos individuais e exportação para Imposto de Renda.</p>
+            <p class="text-sm text-slate-500">Resumo mensal de receitas, recebimentos, vencimentos e exportação para IR.</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="exportIRCSV()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold cursor-pointer">Exportar CSV (Carnê-Leão)</button>
@@ -778,39 +778,73 @@
           </div>
         </div>
 
-        <!-- MODELO EDITÁVEL DA MENSAGEM DE COBRANÇA WHATSAPP -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 class="text-sm font-bold text-slate-900">Modelo da Mensagem de Cobrança (WhatsApp)</h2>
-              <p class="text-xs text-slate-500 mt-0.5">
-                Variáveis disponíveis: <code class="bg-slate-100 px-1 rounded">{nome}</code>, <code class="bg-slate-100 px-1 rounded">{datas}</code>, <code class="bg-slate-100 px-1 rounded">{valor}</code>, <code class="bg-slate-100 px-1 rounded">{vencimento}</code> e <code class="bg-slate-100 px-1 rounded">{vencer}</code> (ajusta automaticamente para <em>vence</em> ou <em>vencem</em>).
-              </p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" onclick="resetBillingTemplateDefault()" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-600 cursor-pointer">
-                Restaurar Padrão
+        <!-- BARRA DE PERÍODO E RESUMO FINANCEIRO -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <label for="fin-filter-month" class="text-xs font-bold uppercase tracking-wider text-slate-600">Período:</label>
+              <input id="fin-filter-month" type="month" onchange="renderFinance()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white" />
+              <button type="button" onclick="setFinanceMonthToCurrent()" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer">
+                Mês Atual
               </button>
-              <button type="button" onclick="saveBillingTemplate()" class="px-3.5 py-1.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">
-                Salvar Modelo
+              <button type="button" onclick="document.getElementById('fin-filter-month').value=''; renderFinance();" class="text-xs text-fuchsia-700 hover:underline cursor-pointer">
+                Ver todos
               </button>
             </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="renderFinance()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer">
+                ↻ Atualizar
+              </button>
+            </div>
           </div>
-          <textarea id="fin-billing-template" rows="3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-fuchsia-600"></textarea>
+
+          <!-- LINHA PRINCIPAL (BASEADA NO RESUMO: TOTAL PREVISTO, RECEITAS PAGAS, RECEITAS À VENCER / NÃO PAGAS) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-base shrink-0">$</div>
+              <div>
+                <p class="text-xs font-semibold text-slate-500">Total previsto</p>
+                <p id="fin-sum-previsto" class="text-2xl font-bold text-slate-900 mt-0.5">R$ 0,00</p>
+                <p id="fin-sum-previsto-sub" class="text-[11px] text-slate-500 mt-0.5"></p>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-base shrink-0">↓</div>
+              <div>
+                <p class="text-xs font-semibold text-slate-600">Receitas pagas</p>
+                <p id="fin-sum-pagas" class="text-2xl font-bold text-emerald-700 mt-0.5">R$ 0,00</p>
+                <p id="fin-sum-pagas-obs" class="text-[11px] text-amber-800 font-medium mt-0.5 hidden"></p>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-rose-200 bg-rose-50/40 p-4 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-base shrink-0">↑</div>
+              <div>
+                <p class="text-xs font-semibold text-slate-600">Receitas à vencer</p>
+                <p id="fin-sum-avencer" class="text-2xl font-bold text-rose-700 mt-0.5">R$ 0,00</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Ainda não passaram da data de vencimento</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- LINHA SECUNDÁRIA: RECEITAS VENCIDAS E RECEITAS VENCIDAS DE PERÍODOS ANTERIORES -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-amber-300 bg-amber-50/60 p-4">
+              <p class="text-xs font-bold uppercase tracking-wider text-amber-900">Receitas vencidas</p>
+              <p id="fin-sum-vencidas" class="text-xl font-bold text-amber-800 mt-1">R$ 0,00</p>
+              <p class="text-[11px] text-amber-800/80 mt-0.5">Vencimento já passou no período e ainda não foram pagas</p>
+            </div>
+
+            <div class="rounded-2xl border border-red-200 bg-red-50/50 p-4">
+              <p class="text-xs font-bold uppercase tracking-wider text-red-900">Receitas vencidas de períodos anteriores</p>
+              <p id="fin-sum-anteriores" class="text-xl font-bold text-red-700 mt-1">R$ 0,00</p>
+              <p class="text-[11px] text-red-700/80 mt-0.5">Todas as receitas não recebidas fora do período atual</p>
+            </div>
+          </div>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-wrap items-center gap-3">
-            <label class="text-xs font-semibold uppercase text-slate-500">Filtrar Período:</label>
-            <input id="fin-filter-month" type="month" onchange="renderFinance()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm" />
-            <button onclick="document.getElementById('fin-filter-month').value=''; renderFinance();" class="text-xs text-fuchsia-700 hover:underline cursor-pointer">Ver todos</button>
-          </div>
-          <div class="text-sm">
-            <span class="text-slate-500">Total Recebido no Filtro:</span>
-            <strong id="fin-filtered-total" class="text-emerald-700 ml-1">R$ 0,00</strong>
-          </div>
-        </div>
-
+        <!-- TABELA DE LANÇAMENTOS -->
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -826,6 +860,35 @@
               </thead>
               <tbody id="finance-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- QUADRO RETRÁTIL NO FINAL: MODELO DA MENSAGEM DE COBRANÇA -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Modelo da Mensagem de Cobrança (WhatsApp)</h2>
+              <p class="text-xs text-slate-500">Oculto por padrão — clique para abrir quando precisar alterar o texto.</p>
+            </div>
+            <button type="button" onclick="toggleBillingTemplateBox()" id="btn-toggle-billing-tpl"
+              class="px-3.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer">
+              Editar Modelo de Mensagem
+            </button>
+          </div>
+
+          <div id="fin-billing-template-box" class="hidden pt-2 border-t border-slate-100 space-y-3">
+            <p class="text-xs text-slate-500">
+              Variáveis disponíveis: <code class="bg-slate-100 px-1 rounded">{nome}</code>, <code class="bg-slate-100 px-1 rounded">{datas}</code>, <code class="bg-slate-100 px-1 rounded">{valor}</code>, <code class="bg-slate-100 px-1 rounded">{vencimento}</code> e <code class="bg-slate-100 px-1 rounded">{vencer}</code> (ajusta automaticamente para <em>vence</em> ou <em>vencem</em>).
+            </p>
+            <textarea id="fin-billing-template" rows="3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-fuchsia-600"></textarea>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button type="button" onclick="resetBillingTemplateDefault()" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-600 cursor-pointer">
+                Restaurar Padrão
+              </button>
+              <button type="button" onclick="saveBillingTemplate()" class="px-3.5 py-1.5 rounded-xl bg-fuchsia-700 hover:bg-fuchsia-800 text-white text-xs font-semibold cursor-pointer">
+                Salvar Modelo
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -3320,33 +3383,150 @@
       window.print();
     }
 
+    function getCurrentMonthYM() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function setFinanceMonthToCurrent() {
+      const inp = document.getElementById('fin-filter-month');
+      if (inp) inp.value = getCurrentMonthYM();
+      renderFinance();
+    }
+
+    function getPreviousMonthYMFromYM(ym) {
+      const baseYM = ym || getCurrentMonthYM();
+      const [yStr, mStr] = baseYM.split('-');
+      const year = Number(yStr);
+      const monthIdx = Number(mStr) - 1;
+      const prev = new Date(year, monthIdx - 1, 1);
+      return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function toggleBillingTemplateBox() {
+      const box = document.getElementById('fin-billing-template-box');
+      const btn = document.getElementById('btn-toggle-billing-tpl');
+      if (!box) return;
+      const isHidden = box.classList.contains('hidden');
+      box.classList.toggle('hidden', !isHidden);
+      if (btn) btn.textContent = isHidden ? 'Ocultar Modelo' : 'Editar Modelo de Mensagem';
+    }
+
     function getFilteredFinance() {
       const monthFilter = document.getElementById('fin-filter-month')?.value;
       if (!monthFilter) return state.finance;
-      return state.finance.filter(f => (f.data_pagamento || f.data_vencimento || '').startsWith(monthFilter));
+      const prevYM = getPreviousMonthYMFromYM(monthFilter);
+      return state.finance.filter(f => {
+        const vencYM = (f.data_vencimento || '').slice(0, 7);
+        const pagYM = (f.data_pagamento || '').slice(0, 7);
+        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        return vencYM === monthFilter || pagYM === monthFilter || sesYM === prevYM;
+      });
     }
 
     function renderFinance() {
-      const list = getFilteredFinance();
-      const totalPaid = list
-        .filter(f => f.status === 'pago')
-        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
-      document.getElementById('fin-filtered-total').textContent = fmtBRL(totalPaid);
+      const monthInput = document.getElementById('fin-filter-month');
+      if (monthInput && !monthInput.dataset.initialized) {
+        monthInput.value = getCurrentMonthYM();
+        monthInput.dataset.initialized = '1';
+      }
 
+      const selectedYM = monthInput?.value || '';
+      const activeYM = selectedYM || getCurrentMonthYM();
+      const sessionsMonthYM = getPreviousMonthYMFromYM(activeYM);
+      const todayISO = new Date().toISOString().slice(0, 10);
+
+      // 1) Total previsto: soma de todas as sessões do mês anterior que geraram cobrança
+      const billedSessionsPrevMonth = state.sessions.filter(s => {
+        const sDateISO = (s.data_hora || '').slice(0, 10);
+        return sDateISO.startsWith(sessionsMonthYM) && isChargedSessionStatus(s.status);
+      });
+      const totalPrevisto = billedSessionsPrevMonth.reduce((acc, s) => {
+        const p = getPatient(s.paciente_id);
+        return acc + Number(s.valor_sessao || p?.valor_sessao || 0);
+      }, 0);
+
+      const prevLabel = new Date(sessionsMonthYM + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const prevSubEl = document.getElementById('fin-sum-previsto-sub');
+      if (prevSubEl) {
+        prevSubEl.textContent = `Sessões de ${prevLabel} (${billedSessionsPrevMonth.length} cobrável(is))`;
+      }
+
+      // Helper para identificar se o lançamento pertence ao período atual (sessões do mês anterior ou vencimento no mês ativo)
+      const isItemInCurrentPeriod = (f) => {
+        if (!selectedYM) return true;
+        const ses = f.sessao_id ? state.sessions.find(s => s.id === f.sessao_id) : null;
+        const sesYM = (ses?.data_hora || '').slice(0, 10).slice(0, 7);
+        if (sesYM) return sesYM === sessionsMonthYM;
+        return (f.data_vencimento || '').startsWith(activeYM);
+      };
+
+      // 2) Receitas pagas referente ao período atual + observação se houver recebimento atrasado de período anterior
+      const paidItems = state.finance.filter(f => f.status === 'pago');
+      const paidCurrentPeriod = paidItems.filter(f => isItemInCurrentPeriod(f));
+      const latePaidEarlierPeriod = paidItems.filter(f => {
+        if (isItemInCurrentPeriod(f)) return false;
+        const pagYM = (f.data_pagamento || '').slice(0, 7);
+        return selectedYM ? (pagYM === activeYM || (f.data_vencimento || '').slice(0, 7) < activeYM) : false;
+      });
+
+      const receitasPagas = paidCurrentPeriod.reduce((acc, f) => acc + Number(f.valor || 0), 0);
+      const latePaidTotal = latePaidEarlierPeriod.reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      const obsEl = document.getElementById('fin-sum-pagas-obs');
+      if (obsEl) {
+        if (latePaidTotal > 0) {
+          obsEl.textContent = `Obs: há ${fmtBRL(latePaidTotal)} recebido(s) referente a período anterior.`;
+          obsEl.classList.remove('hidden');
+        } else {
+          obsEl.textContent = '';
+          obsEl.classList.add('hidden');
+        }
+      }
+
+      // 3) Não pagos: à vencer (data de vencimento ainda não passou), vencidas (já passou no período), e vencidas de períodos anteriores
+      const unpaidAll = state.finance.filter(f => f.status !== 'pago');
+      const unpaidCurrent = unpaidAll.filter(f => isItemInCurrentPeriod(f));
+      const unpaidOtherPeriods = unpaidAll.filter(f => !isItemInCurrentPeriod(f));
+
+      const receitasAVencer = unpaidCurrent
+        .filter(f => (f.data_vencimento || '') >= todayISO)
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      const receitasVencidas = unpaidCurrent
+        .filter(f => (f.data_vencimento || '') && (f.data_vencimento || '') < todayISO)
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      const receitasVencidasAnteriores = unpaidOtherPeriods
+        .reduce((acc, f) => acc + Number(f.valor || 0), 0);
+
+      document.getElementById('fin-sum-previsto').textContent = fmtBRL(totalPrevisto);
+      document.getElementById('fin-sum-pagas').textContent = fmtBRL(receitasPagas);
+      document.getElementById('fin-sum-avencer').textContent = fmtBRL(receitasAVencer);
+      document.getElementById('fin-sum-vencidas').textContent = fmtBRL(receitasVencidas);
+      document.getElementById('fin-sum-anteriores').textContent = fmtBRL(receitasVencidasAnteriores);
+
+      const list = getFilteredFinance();
       const tbody = document.getElementById('finance-tbody');
       if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="6" class="py-6 px-4 text-center text-slate-400">Nenhum lançamento encontrado.</td></tr>';
         return;
       }
-      tbody.innerHTML = list.map(f => `
+      tbody.innerHTML = list.map(f => {
+        const isVencido = f.status !== 'pago' && (f.data_vencimento || '') && (f.data_vencimento || '') < todayISO;
+        return `
         <tr>
           <td class="py-3 px-4 whitespace-nowrap">${fmtDate(f.data_vencimento)}</td>
           <td class="py-3 px-4 font-medium text-slate-900">${getPatientName(f.paciente_id)}</td>
           <td class="py-3 px-4">${f.descricao}</td>
           <td class="py-3 px-4 font-semibold whitespace-nowrap">${fmtBRL(f.valor)}</td>
           <td class="py-3 px-4">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${f.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
-              ${f.status === 'pago' ? `Pago (${f.forma_pagamento || '—'})` : 'Pendente'}
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              f.status === 'pago'
+                ? 'bg-emerald-50 text-emerald-700'
+                : (isVencido ? 'bg-amber-100 text-amber-800' : 'bg-rose-50 text-rose-700')
+            }">
+              ${f.status === 'pago' ? `Pago (${f.forma_pagamento || '—'})` : (isVencido ? 'Vencida' : 'À vencer')}
             </span>
           </td>
           <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
@@ -3354,7 +3534,8 @@
             <button onclick="printReceipt('${f.id}')" class="text-xs font-semibold text-slate-700 hover:underline cursor-pointer">Recibo / PDF</button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function exportIRCSV() {
