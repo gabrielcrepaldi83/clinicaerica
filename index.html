@@ -3551,8 +3551,7 @@
         if (error || !data) {
           if (boxEl) boxEl.classList.remove('hidden');
           if (sEl && !sEl.value.trim()) {
-            sEl.value = 'Pontos principais da sessão:
-- ';
+            sEl.value = 'Pontos principais da sessão:\n- ';
           }
           if (tEl && !tEl.value.trim()) {
             tEl.value = `Transcrição resumida (${formatRecTimer(sesRecSeconds)}): [Aguardando resposta da Edge Function "transcribe-summarize-session" com transcrição resumida e sem armazenamento de áudio.]`;
